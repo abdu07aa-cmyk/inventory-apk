@@ -101,7 +101,6 @@
       box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
     }
 
-    /* Table styles */
     .table-wrapper {
       overflow-x: auto;
       border-radius: 20px;
@@ -206,14 +205,22 @@
       font-style: italic;
     }
 
-    /* Filter bar */
     .filter-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 10px;
     }
 
-    /* Responsive */
+    .error-message {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 12px;
+      border-radius: 16px;
+      margin: 10px 0;
+      text-align: center;
+      font-size: 14px;
+    }
+
     @media (max-width: 480px) {
       .btn-group .btn {
         flex: 1 1 100%;
@@ -270,18 +277,19 @@
     <div class="filter-grid">
       <input type="date" id="fTanggal" placeholder="Tanggal">
       <input type="text" id="fBrand" placeholder="Cari brand">
-      <select id="fLine"><option value="">Line</option></select>
-      <select id="fOP"><option value="">OP</option></select>
-      <select id="fJenis"><option value="">Jenis</option></select>
-      <select id="fSize"><option value="">Size</option></select>
-      <select id="fPaper"><option value="">Paper</option></select>
+      <select id="fLine"><option value="">Semua Line</option></select>
+      <select id="fOP"><option value="">Semua OP</option></select>
+      <select id="fJenis"><option value="">Semua Jenis</option></select>
+      <select id="fSize"><option value="">Semua Size</option></select>
+      <select id="fPaper"><option value="">Semua Paper</option></select>
     </div>
   </div>
 
   <!-- Data Card -->
   <div class="card">
     <div class="card-title">📊 Data Tersimpan</div>
-    <div id="loadingState" class="loading" style="display:none">⏳ Memuat data...</div>
+    <div id="loadingState" class="loading" style="display:block">⏳ Memuat data...</div>
+    <div id="errorContainer" class="error-message" style="display:none"></div>
     <div class="table-wrapper">
       <table id="dataTable">
         <thead>
@@ -299,15 +307,16 @@
 
 <script>
   // ============== SUPABASE INIT ==============
-  const sb = supabase.createClient(
-    "https://gnpjzhwbjeidabxdturx.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImducGp6aHdiamVpZGFieGR0dXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODc4NTUsImV4cCI6MjA4MzM2Mzg1NX0.Lsdt0mC1MCPeUATPukRRnXFwEpsaQdNzs927086vxjY"
-  );
+  const SUPABASE_URL = "https://gnpjzhwbjeidabxdturx.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImducGp6aHdiamVpZGFieGR0dXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODc4NTUsImV4cCI6MjA4MzM2Mzg1NX0.Lsdt0mC1MCPeUATPukRRnXFwEpsaQdNzs927086vxjY";
+  
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // ============== DOM ELEMENTS ==============
   const inputTable = document.getElementById('inputTable');
   const dataTable = document.getElementById('dataTable');
   const loadingState = document.getElementById('loadingState');
+  const errorContainer = document.getElementById('errorContainer');
   const tanggal = document.getElementById('tanggal');
   const brand = document.getElementById('brand');
 
@@ -329,48 +338,59 @@
 
   // Helper: create option list
   function createOptions(list, withEmpty = true) {
-    let html = withEmpty ? '<option value="">-- semua --</option>' : '';
+    let html = withEmpty ? '<option value="">-- pilih --</option>' : '';
+    list.forEach(v => html += `<option value="${v}">${v}</option>`);
+    return html;
+  }
+
+  // Helper: create filter options (dengan semua)
+  function createFilterOptions(list) {
+    let html = '<option value="">Semua</option>';
     list.forEach(v => html += `<option value="${v}">${v}</option>`);
     return html;
   }
 
   // ============== FILL FILTER DROPDOWNS ==============
-  fLine.innerHTML = createOptions(lineList);
-  fOP.innerHTML = createOptions(opList);
-  fJenis.innerHTML = createOptions(jenisList);
-  fSize.innerHTML = createOptions(sizeList);
-  fPaper.innerHTML = createOptions(paperList);
+  fLine.innerHTML = createFilterOptions(lineList);
+  fOP.innerHTML = createFilterOptions(opList);
+  fJenis.innerHTML = createFilterOptions(jenisList);
+  fSize.innerHTML = createFilterOptions(sizeList);
+  fPaper.innerHTML = createFilterOptions(paperList);
 
   // ============== ADD ROW TO INPUT TABLE ==============
-  function tambahBaris() {
+  window.tambahBaris = function() {
     const tbody = inputTable.tBodies[0];
     const row = tbody.insertRow();
 
     row.innerHTML = `
-      <td><select>${createOptions(lineList, true)}</select></td>
-      <td><select>${createOptions(opList, true)}</select></td>
-      <td><select>${createOptions(jenisList, true)}</select></td>
-      <td><select>${createOptions(sizeList, true)}</select></td>
-      <td><select>${createOptions(paperList, true)}</select></td>
-      <td><input type="number" value="0" min="0"></td>
-      <td><input type="number" value="0" min="0"></td>
-      <td><button class="btn btn-danger" style="padding:6px 12px;" onclick="this.closest('tr').remove()">✕</button></td>
+      <td><select>${createOptions(lineList)}</select></td>
+      <td><select>${createOptions(opList)}</select></td>
+      <td><select>${createOptions(jenisList)}</select></td>
+      <td><select>${createOptions(sizeList)}</select></td>
+      <td><select>${createOptions(paperList)}</select></td>
+      <td><input type="number" value="1" min="0" step="1"></td>
+      <td><input type="number" value="0" min="0" step="1"></td>
+      <td><button class="btn btn-danger" style="padding:6px 12px;" onclick="this.closest('tr').remove()">✕ Hapus</button></td>
     `;
-  }
+  };
 
   // ============== FORMAT DATE ==============
   function formatTanggalID(tgl) {
-    if (!tgl) return '';
-    const d = new Date(tgl);
-    if (isNaN(d)) return tgl;
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+    if (!tgl) return '-';
+    try {
+      const d = new Date(tgl);
+      if (isNaN(d)) return tgl;
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    } catch {
+      return tgl;
+    }
   }
 
   // ============== SAVE DATA ==============
-  async function simpanData() {
+  window.simpanData = async function() {
     if (!tanggal.value || !brand.value) {
       alert('❌ Tanggal & Brand wajib diisi');
       return;
@@ -383,81 +403,135 @@
     }
 
     let berhasil = 0;
+    let gagal = 0;
+
     for (let r of rows) {
       const cells = r.cells;
-      const line = cells[0].querySelector('select').value;
-      const op = cells[1].querySelector('select').value;
-      const jenis = cells[2].querySelector('select').value;
-      const size = cells[3].querySelector('select').value;
-      const paper = cells[4].querySelector('select').value;
-      const permintaan = cells[5].querySelector('input').value || 0;
-      const kirim = cells[6].querySelector('input').value || 0;
+      const line = cells[0].querySelector('select')?.value;
+      const op = cells[1].querySelector('select')?.value;
+      const jenis = cells[2].querySelector('select')?.value;
+      const size = cells[3].querySelector('select')?.value;
+      const paper = cells[4].querySelector('select')?.value;
+      const permintaan = cells[5].querySelector('input')?.value || 0;
+      const kirim = cells[6].querySelector('input')?.value || 0;
 
-      if (!line || !jenis) continue; // skip baris kosong
+      if (!line || !jenis) {
+        gagal++;
+        continue;
+      }
 
       const { error } = await sb.from('permintaan_barang').insert({
         tanggal: tanggal.value,
         brand: brand.value,
         line, op, jenis, size, paper,
-        permintaan: parseInt(permintaan),
-        kirim: parseInt(kirim)
+        permintaan: parseInt(permintaan) || 0,
+        kirim: parseInt(kirim) || 0
       });
 
-      if (!error) berhasil++;
+      if (!error) {
+        berhasil++;
+      } else {
+        gagal++;
+        console.error("Insert error:", error);
+      }
     }
 
-    alert(`✅ ${berhasil} data berhasil disimpan`);
-
-    // Reset form
-    inputTable.tBodies[0].innerHTML = '';
-    tambahBaris();
-    tanggal.value = '';
-    brand.value = '';
-    loadData();
-  }
+    if (berhasil > 0) {
+      alert(`✅ ${berhasil} data berhasil disimpan${gagal > 0 ? `, ${gagal} gagal` : ''}`);
+      
+      // Reset form
+      inputTable.tBodies[0].innerHTML = '';
+      tambahBaris();
+      tanggal.value = '';
+      brand.value = '';
+      loadData();
+    } else {
+      alert('❌ Gagal menyimpan data. Lihat console (F12) untuk detail.');
+    }
+  };
 
   // ============== LOAD DATA WITH FILTER ==============
   async function loadData() {
+    // Tampilkan loading
     loadingState.style.display = 'block';
+    errorContainer.style.display = 'none';
+    errorContainer.innerHTML = '';
+    
     const tbody = dataTable.tBodies[0];
     tbody.innerHTML = '';
 
-    let query = sb.from('permintaan_barang')
-      .select('*')
-      .order('tanggal', { ascending: false })
-      .order('created_at', { ascending: false });
+    try {
+      // Test koneksi dulu
+      const testUrl = `${SUPABASE_URL}/rest/v1/permintaan_barang?select=count&apikey=${SUPABASE_KEY}`;
+      const testRes = await fetch(testUrl);
+      
+      if (!testRes.ok) {
+        throw new Error(`HTTP ${testRes.status}: ${await testRes.text()}`);
+      }
 
-    if (fTanggal.value) query = query.eq('tanggal', fTanggal.value);
-    if (fBrand.value) query = query.ilike('brand', `%${fBrand.value}%`);
-    if (fLine.value) query = query.eq('line', fLine.value);
-    if (fOP.value) query = query.eq('op', fOP.value);
-    if (fJenis.value) query = query.eq('jenis', fJenis.value);
-    if (fSize.value) query = query.eq('size', fSize.value);
-    if (fPaper.value) query = query.eq('paper', fPaper.value);
+      // Build query
+      let query = sb.from('permintaan_barang')
+        .select('*')
+        .order('tanggal', { ascending: false })
+        .order('created_at', { ascending: false });
 
-    const { data } = await query;
+      if (fTanggal.value) query = query.eq('tanggal', fTanggal.value);
+      if (fBrand.value) query = query.ilike('brand', `%${fBrand.value}%`);
+      if (fLine.value) query = query.eq('line', fLine.value);
+      if (fOP.value) query = query.eq('op', fOP.value);
+      if (fJenis.value) query = query.eq('jenis', fJenis.value);
+      if (fSize.value) query = query.eq('size', fSize.value);
+      if (fPaper.value) query = query.eq('paper', fPaper.value);
 
-    data.forEach(d => {
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        data.forEach(d => {
+          const row = tbody.insertRow();
+          row.dataset.id = d.id;
+
+          row.innerHTML = `
+            <td data-tanggal="${d.tanggal}">${formatTanggalID(d.tanggal)}</td>
+            <td>${d.brand || '-'}</td>
+            <td>${d.line || '-'}</td>
+            <td>${d.op || '-'}</td>
+            <td>${d.jenis || '-'}</td>
+            <td>${d.size || '-'}</td>
+            <td>${d.paper || '-'}</td>
+            <td>${d.permintaan || '0'}</td>
+            <td>${d.kirim || '0'}</td>
+            <td>
+              <button class="btn btn-warning" style="padding:6px 12px;" onclick="editRow(this)">✏️ Edit</button>
+            </td>
+          `;
+        });
+      } else {
+        // Tampilkan pesan jika tidak ada data
+        const row = tbody.insertRow();
+        row.innerHTML = `<td colspan="10" style="text-align:center; padding:30px;">📭 Belum ada data</td>`;
+      }
+
+    } catch (error) {
+      console.error("Error loading data:", error);
+      
+      // Tampilkan error di UI
+      errorContainer.style.display = 'block';
+      errorContainer.innerHTML = `❌ Error: ${error.message || 'Gagal memuat data'}`;
+      
+      // Tampilkan pesan di tabel
       const row = tbody.insertRow();
-      row.dataset.id = d.id;
-
-      row.innerHTML = `
-        <td data-tanggal="${d.tanggal}">${formatTanggalID(d.tanggal)}</td>
-        <td>${d.brand}</td>
-        <td>${d.line}</td>
-        <td>${d.op}</td>
-        <td>${d.jenis}</td>
-        <td>${d.size}</td>
-        <td>${d.paper}</td>
-        <td>${d.permintaan}</td>
-        <td>${d.kirim}</td>
-        <td>
-          <button class="btn btn-warning" style="padding:6px 12px;" onclick="editRow(this)">✏️ Edit</button>
-        </td>
-      `;
-    });
-
-    loadingState.style.display = 'none';
+      row.innerHTML = `<td colspan="10" style="text-align:center; padding:30px; color:#b91c1c;">
+        ❌ Gagal memuat data. Cek koneksi dan pastikan tabel "permintaan_barang" sudah dibuat.
+      </td>`;
+      
+    } finally {
+      // MATIKAN LOADING (PASTI JALAN)
+      loadingState.style.display = 'none';
+    }
   }
 
   // ============== EDIT ROW ==============
@@ -468,51 +542,55 @@
 
     // If already in edit mode (save)
     if (btn.innerText.includes('💾')) {
-      const payload = {
-        line: tds[2].querySelector('select').value,
-        op: tds[3].querySelector('select').value,
-        jenis: tds[4].querySelector('select').value,
-        size: tds[5].querySelector('select').value,
-        paper: tds[6].querySelector('select').value,
-        permintaan: Number(tds[7].querySelector('input').value) || 0,
-        kirim: Number(tds[8].querySelector('input').value) || 0
-      };
+      try {
+        const payload = {
+          line: tds[2].querySelector('select')?.value,
+          op: tds[3].querySelector('select')?.value,
+          jenis: tds[4].querySelector('select')?.value,
+          size: tds[5].querySelector('select')?.value,
+          paper: tds[6].querySelector('select')?.value,
+          permintaan: Number(tds[7].querySelector('input')?.value) || 0,
+          kirim: Number(tds[8].querySelector('input')?.value) || 0
+        };
 
-      const { error } = await sb.from('permintaan_barang').update(payload).eq('id', id);
-      if (error) {
-        alert(error.message);
-        return;
+        const { error } = await sb.from('permintaan_barang').update(payload).eq('id', id);
+        if (error) {
+          alert('Error: ' + error.message);
+          return;
+        }
+
+        // restore view
+        tds[2].innerText = payload.line;
+        tds[3].innerText = payload.op;
+        tds[4].innerText = payload.jenis;
+        tds[5].innerText = payload.size;
+        tds[6].innerText = payload.paper;
+        tds[7].innerText = payload.permintaan;
+        tds[8].innerText = payload.kirim;
+
+        btn.innerText = '✏️ Edit';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-warning');
+
+        // remove delete button if exists
+        const delBtn = tr.querySelector('.btn-danger');
+        if (delBtn) delBtn.remove();
+
+      } catch (err) {
+        alert('Error: ' + err.message);
       }
-
-      // restore view
-      tds[2].innerText = payload.line;
-      tds[3].innerText = payload.op;
-      tds[4].innerText = payload.jenis;
-      tds[5].innerText = payload.size;
-      tds[6].innerText = payload.paper;
-      tds[7].innerText = payload.permintaan;
-      tds[8].innerText = payload.kirim;
-
-      btn.innerText = '✏️ Edit';
-      btn.classList.remove('btn-success');
-      btn.classList.add('btn-warning');
-
-      // remove delete button if exists
-      const delBtn = tr.querySelector('.btn-danger');
-      if (delBtn) delBtn.remove();
-
       return;
     }
 
     // ENTER EDIT MODE
     function toSelect(list, val) {
-      let html = '<select>';
+      let html = '<select style="width:100%;">';
       list.forEach(v => html += `<option ${v === val ? 'selected' : ''}>${v}</option>`);
       html += '</select>';
       return html;
     }
     function toInput(val) {
-      return `<input type="number" value="${val}" min="0">`;
+      return `<input type="number" value="${val}" min="0" style="width:100%;">`;
     }
 
     tds[2].innerHTML = toSelect(lineList, tds[2].innerText);
@@ -527,7 +605,7 @@
     if (!tr.querySelector('.btn-danger')) {
       const del = document.createElement('button');
       del.className = 'btn btn-danger';
-      del.style.padding = '6px 12px';
+      del.style.cssText = 'padding:6px 12px; margin-left:5px;';
       del.innerText = '🗑️ Hapus';
       del.onclick = () => hapusData(id, tr);
       tds[9].appendChild(del);
@@ -541,12 +619,18 @@
   // ============== DELETE DATA ==============
   window.hapusData = async function(id, tr) {
     if (!confirm('Yakin hapus data ini?')) return;
-    const { error } = await sb.from('permintaan_barang').delete().eq('id', id);
-    if (error) {
-      alert(error.message);
-      return;
+    
+    try {
+      const { error } = await sb.from('permintaan_barang').delete().eq('id', id);
+      if (error) {
+        alert('Error: ' + error.message);
+        return;
+      }
+      tr.remove();
+      alert('✅ Data berhasil dihapus');
+    } catch (err) {
+      alert('Error: ' + err.message);
     }
-    tr.remove();
   };
 
   // ============== KIRIM WA ==============
@@ -556,13 +640,14 @@
     let pesan = `📦 *PERMINTAAN BARANG*\nTanggal: ${t}\nBrand: ${b}\n\n`;
 
     const rows = dataTable.tBodies[0].rows;
-    if (rows.length === 0) {
+    if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) {
       alert('Tidak ada data');
       return;
     }
 
     for (let r of rows) {
       const c = r.cells;
+      if (c.length < 9) continue;
       pesan += `• ${c[2].innerText} | ${c[4].innerText} | ${c[7].innerText}/${c[8].innerText}\n`;
     }
     window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(pesan));
@@ -571,12 +656,12 @@
   // ============== KIRIM EXCEL ==============
   window.kirimExcel = function() {
     const tbody = dataTable.tBodies[0];
-    if (tbody.rows.length === 0) {
+    if (tbody.rows.length === 0 || (tbody.rows.length === 1 && tbody.rows[0].cells.length === 1)) {
       alert('Tidak ada data untuk diexport');
       return;
     }
 
-    const rows = Array.from(tbody.rows).map(r => ({
+    const rows = Array.from(tbody.rows).filter(r => r.cells.length > 1).map(r => ({
       tanggalRaw: r.cells[0].dataset.tanggal,
       tanggalID: formatTanggalID(r.cells[0].dataset.tanggal),
       brand: r.cells[1].innerText,
@@ -601,7 +686,7 @@
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     XLSX.utils.book_append_sheet(wb, ws, 'Permintaan Barang');
-    XLSX.writeFile(wb, `Permintaan_${fTanggal.value || 'Semua'}_${fBrand.value || 'Semua'}.xlsx`);
+    XLSX.writeFile(wb, `Permintaan_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   // ============== EVENT LISTENERS ==============
@@ -614,6 +699,9 @@
   tanggal.valueAsDate = new Date();
   tambahBaris();
   loadData();
+
+  // Tambahkan test koneksi manual (bisa dihapus nanti)
+  console.log("Aplikasi siap, mencoba koneksi ke Supabase...");
 </script>
 </body>
 </html>
