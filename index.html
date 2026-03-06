@@ -1,480 +1,619 @@
-<!DOCTYPE html>  <html lang="id">  
-<head>  
-<meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  
-<title>Form Permintaan Barang</title>  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  <style>  
-  td[contenteditable="true"]{  
-  background:#e0f2fe;  
-  outline:2px solid #2563eb;  
-}  
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Form Permintaan Barang</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-body{
-  font-family:Segoe UI,Arial;
-  background:#f1f5f9;
-  padding:20px 20px 90px;
-}
+    body {
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f1f5f9;
+      padding: 12px 12px 90px;
+    }
 
-.container{
-  max-width:1400px;
-  margin:auto;
-}
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
 
-.header{
-  background:#1e293b;
-  color:white;
-  padding:18px 22px;
-  border-radius:12px;
-  margin-bottom:20px;
-}
+    .header {
+      background: #1e293b;
+      color: white;
+      padding: 16px 20px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
 
-.header h2{
-  font-size:22px;
-}
+    .header h2 {
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+    }
 
-.card{
-  background:white;
-  border-radius:12px;
-  box-shadow:0 4px 15px rgba(0,0,0,.08);
-  margin-bottom:20px;
-  padding:18px;
-}
+    .header p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
 
-.card-title{
-  font-weight:700;
-  margin-bottom:12px;
-  color:#1e293b;
-}
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 18px 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+    }
 
-.form-row{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:14px;
-}
+    .card-title {
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #0f172a;
+      font-size: 1.1rem;
+      border-left: 5px solid #2563eb;
+      padding-left: 12px;
+    }
 
-.form-group label{
-  font-size:13px;
-  font-weight:600;
-}
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 8px;
+    }
 
-.form-group input,
-.form-group select{
-  width:100%;
-  padding:9px;
-  border-radius:8px;
-  border:1px solid #cbd5e1;
-}
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-}
+    .form-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #475569;
+      margin-bottom: 4px;
+      letter-spacing: 0.3px;
+    }
 
-th{
-  background:#2563eb;
-  color:white;
-  padding:10px;
-  font-size:13px;
-}
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1.5px solid #e2e8f0;
+      font-size: 15px;
+      background: #f8fafc;
+      outline: none;
+      transition: 0.2s;
+    }
 
-td{
-  padding:8px;
-  border-bottom:1px solid #e5e7eb;
-  text-align:center;
-}
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: #2563eb;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
 
-td input,
-td select{
-  width:100%;
-  padding:6px;
-  border-radius:6px;
-  border:1px solid #cbd5e1;
-}
+    /* Table styles */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 20px;
+      border: 1.5px solid #e2e8f0;
+      background: #f8fafc;
+      margin: 16px 0;
+    }
 
-.btn{
-  padding:10px 14px;
-  border:none;
-  border-radius:8px;
-  font-weight:600;
-  cursor:pointer;
-}
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 800px;
+      font-size: 13px;
+    }
 
-.btn-primary{background:#2563eb;color:white}
-.btn-success{background:#10b981;color:white}
-.btn-warning{background:#f59e0b;color:white}
-.btn-danger{background:#ef4444;color:white}
+    th {
+      background: #2563eb;
+      color: white;
+      padding: 14px 8px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
 
-.btn-group{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin-top:16px;
-}
+    td {
+      padding: 12px 8px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: center;
+      color: #1e293b;
+    }
 
-.loading{
-  text-align:center;
-  padding:25px;
-  color:#475569;
-}
-</style> </head>  <body>  
-<div class="container">  <div class="header">  
-  <h2>📦 Form Permintaan Barang</h2>  
-  <p>Kelola permintaan barang</p>  
-</div>  <div class="card">  
-  <div class="form-row">  
-    <div class="form-group">  
-      <label>Tanggal</label>  
-      <input type="date" id="tanggal">  
-    </div>  
-    <div class="form-group">  
-      <label>Brand</label>  
-      <input type="text" id="brand">  
-    </div>  
-  </div>    <div class="card-title">Detail Barang</div>    <table id="inputTable">  
-    <thead>  
-      <tr>  
-        <th>Line</th><th>OP</th><th>Jenis</th><th>Size</th><th>Paper</th>  
-        <th>Permintaan</th><th>Kirim</th><th>Aksi</th>  
-      </tr>  
-    </thead>  
-    <tbody></tbody>  
-  </table>  <button class="btn btn-primary" onclick="tambahBaris()">➕ Tambah Barang</button>
+    td input,
+    td select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1.5px solid #e2e8f0;
+      background: white;
+      font-size: 12px;
+    }
 
-  <div class="btn-group">  
-    <button class="btn btn-success" onclick="simpanData()">💾 Simpan</button>  
-    <button class="btn btn-primary" onclick="kirimWA()">📲 Kirim WA</button>  
-    <button class="btn btn-warning" onclick="kirimExcel()">📊 Kirim Excel</button>  
-  </div>  
-</div>  <div class="card">  
-  <div class="card-title">Filter Data</div>  
-  <div class="form-row">  
-    <input type="date" id="fTanggal">  
-    <input placeholder="Brand" id="fBrand">  
-    <select id="fLine"></select>  
-    <select id="fOP"></select>  
-    <select id="fJenis"></select>  
-    <select id="fSize"></select>  
-    <select id="fPaper"></select>  
-  </div>  
-</div>  <div class="card">  
-  <div class="card-title">Data Tersimpan</div>  
-  <div id="loadingState" class="loading" style="display:none">Memuat...</div>  
-  <table id="dataTable">  
-    <thead>  
-      <tr>  
-        <th>Tanggal</th><th>Brand</th><th>Line</th><th>OP</th>  
-        <th>Jenis</th><th>Size</th><th>Paper</th>  
-        <th>Permintaan</th><th>Kirim</th><th>Aksi</th>  
-      </tr>  
-    </thead>  
-    <tbody></tbody>  
-  </table>  
-</div>  </div>  <script>
-window.editRow = async function(btn){
-  const tr = btn.closest("tr");
-  const id = tr.dataset.id;
-  const tds = tr.querySelectorAll("td");
+    td[contenteditable="true"] {
+      background: #e0f2fe;
+      outline: 2px solid #2563eb;
+      border-radius: 8px;
+    }
 
-  const toSelect = (list, val) =>
-    `<select>${list.map(v =>
-      `<option ${v==val?'selected':''}>${v}</option>`
-    ).join('')}</select>`;
+    .btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
 
-  const toInput = v => `<input type="number" value="${v}">`;
+    .btn:active {
+      transform: scale(0.97);
+    }
 
-  // ================= SAVE =================
-  if(btn.dataset.mode === "edit"){
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
 
-    const payload = {
-      line       : tds[2].querySelector("select").value,
-      op         : tds[3].querySelector("select").value,
-      jenis      : tds[4].querySelector("select").value,
-      size       : tds[5].querySelector("select").value,
-      paper      : tds[6].querySelector("select").value,
-      permintaan : Number(tds[7].querySelector("input").value) || 0,
-      kirim      : Number(tds[8].querySelector("input").value) || 0
-    };
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
 
-    const { error } = await sb
-      .from("permintaan_barang")
-      .update(payload)
-      .eq("id", id);
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
 
-    if(error){
-      alert(error.message);
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .btn-group .btn {
+      flex: 1 1 calc(33.333% - 8px);
+      min-width: 120px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #475569;
+      font-style: italic;
+    }
+
+    /* Filter bar */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .btn-group .btn {
+        flex: 1 1 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2>📦 Form Permintaan Barang</h2>
+    <p>Kelola permintaan barang</p>
+  </div>
+
+  <!-- Input Card -->
+  <div class="card">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tanggal</label>
+        <input type="date" id="tanggal">
+      </div>
+      <div class="form-group">
+        <label>Brand</label>
+        <input type="text" id="brand" placeholder="Nama brand">
+      </div>
+    </div>
+
+    <div class="card-title">📋 Detail Barang</div>
+
+    <div class="table-wrapper">
+      <table id="inputTable">
+        <thead>
+          <tr>
+            <th>Line</th><th>OP</th><th>Jenis</th><th>Size</th><th>Paper</th>
+            <th>Permintaan</th><th>Kirim</th><th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <button class="btn btn-primary" onclick="tambahBaris()" style="width:100%; margin:10px 0;">➕ Tambah Barang</button>
+
+    <div class="btn-group">
+      <button class="btn btn-success" onclick="simpanData()">💾 Simpan</button>
+      <button class="btn btn-primary" onclick="kirimWA()">📲 Kirim WA</button>
+      <button class="btn btn-warning" onclick="kirimExcel()">📊 Excel</button>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="card">
+    <div class="card-title">🔍 Filter Data</div>
+    <div class="filter-grid">
+      <input type="date" id="fTanggal" placeholder="Tanggal">
+      <input type="text" id="fBrand" placeholder="Cari brand">
+      <select id="fLine"><option value="">Line</option></select>
+      <select id="fOP"><option value="">OP</option></select>
+      <select id="fJenis"><option value="">Jenis</option></select>
+      <select id="fSize"><option value="">Size</option></select>
+      <select id="fPaper"><option value="">Paper</option></select>
+    </div>
+  </div>
+
+  <!-- Data Card -->
+  <div class="card">
+    <div class="card-title">📊 Data Tersimpan</div>
+    <div id="loadingState" class="loading" style="display:none">⏳ Memuat data...</div>
+    <div class="table-wrapper">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Tanggal</th><th>Brand</th><th>Line</th><th>OP</th>
+            <th>Jenis</th><th>Size</th><th>Paper</th>
+            <th>Permintaan</th><th>Kirim</th><th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============== SUPABASE INIT ==============
+  const sb = supabase.createClient(
+    "https://gnpjzhwbjeidabxdturx.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImducGp6aHdiamVpZGFieGR0dXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODc4NTUsImV4cCI6MjA4MzM2Mzg1NX0.Lsdt0mC1MCPeUATPukRRnXFwEpsaQdNzs927086vxjY"
+  );
+
+  // ============== DOM ELEMENTS ==============
+  const inputTable = document.getElementById('inputTable');
+  const dataTable = document.getElementById('dataTable');
+  const loadingState = document.getElementById('loadingState');
+  const tanggal = document.getElementById('tanggal');
+  const brand = document.getElementById('brand');
+
+  // Filter elements
+  const fTanggal = document.getElementById('fTanggal');
+  const fBrand = document.getElementById('fBrand');
+  const fLine = document.getElementById('fLine');
+  const fOP = document.getElementById('fOP');
+  const fJenis = document.getElementById('fJenis');
+  const fSize = document.getElementById('fSize');
+  const fPaper = document.getElementById('fPaper');
+
+  // ============== DROPDOWN LISTS ==============
+  const lineList  = ["LINE 1","LINE 2","LINE 3","LINE 4","LINE 5","LINE 6","TRAINING","MACHINE","GUDANG","QC","PENGAWAS","LEADER","OFFICE"];
+  const opList    = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"];
+  const jenisList = ["BOOKLET","FILTER PRINTED","FILTER WHITE","FILTER BROWN","PAPERS","COVER","MAGNET","PLAT","GRINDER","DOUBLE TAPE","DISPLAY"];
+  const sizeList  = ["SINGLE","1 1/4","KS","KSS","KSSS","SKS","70 MM","83 MM","84 MM","109 MM","110 MM","115 MM"];
+  const paperList = ["32 LEAVES","33 LEAVES","35 LEAVES","40 LEAVES","42 LEAVES","50 LEAVES","51 LEAVES","52 LEAVES"];
+
+  // Helper: create option list
+  function createOptions(list, withEmpty = true) {
+    let html = withEmpty ? '<option value="">-- semua --</option>' : '';
+    list.forEach(v => html += `<option value="${v}">${v}</option>`);
+    return html;
+  }
+
+  // ============== FILL FILTER DROPDOWNS ==============
+  fLine.innerHTML = createOptions(lineList);
+  fOP.innerHTML = createOptions(opList);
+  fJenis.innerHTML = createOptions(jenisList);
+  fSize.innerHTML = createOptions(sizeList);
+  fPaper.innerHTML = createOptions(paperList);
+
+  // ============== ADD ROW TO INPUT TABLE ==============
+  function tambahBaris() {
+    const tbody = inputTable.tBodies[0];
+    const row = tbody.insertRow();
+
+    row.innerHTML = `
+      <td><select>${createOptions(lineList, true)}</select></td>
+      <td><select>${createOptions(opList, true)}</select></td>
+      <td><select>${createOptions(jenisList, true)}</select></td>
+      <td><select>${createOptions(sizeList, true)}</select></td>
+      <td><select>${createOptions(paperList, true)}</select></td>
+      <td><input type="number" value="0" min="0"></td>
+      <td><input type="number" value="0" min="0"></td>
+      <td><button class="btn btn-danger" style="padding:6px 12px;" onclick="this.closest('tr').remove()">✕</button></td>
+    `;
+  }
+
+  // ============== FORMAT DATE ==============
+  function formatTanggalID(tgl) {
+    if (!tgl) return '';
+    const d = new Date(tgl);
+    if (isNaN(d)) return tgl;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  // ============== SAVE DATA ==============
+  async function simpanData() {
+    if (!tanggal.value || !brand.value) {
+      alert('❌ Tanggal & Brand wajib diisi');
       return;
     }
 
-    // balik ke text
-    tds[2].innerText = payload.line;
-    tds[3].innerText = payload.op;
-    tds[4].innerText = payload.jenis;
-    tds[5].innerText = payload.size;
-    tds[6].innerText = payload.paper;
-    tds[7].innerText = payload.permintaan;
-    tds[8].innerText = payload.kirim;
+    const rows = inputTable.tBodies[0].rows;
+    if (rows.length === 0) {
+      alert('❌ Tambahkan minimal 1 barang');
+      return;
+    }
 
-    btn.innerText = "✏️ Edit";
-    btn.dataset.mode = "";
-    btn.classList.remove("btn-success");
-    btn.classList.add("btn-warning");
+    let berhasil = 0;
+    for (let r of rows) {
+      const cells = r.cells;
+      const line = cells[0].querySelector('select').value;
+      const op = cells[1].querySelector('select').value;
+      const jenis = cells[2].querySelector('select').value;
+      const size = cells[3].querySelector('select').value;
+      const paper = cells[4].querySelector('select').value;
+      const permintaan = cells[5].querySelector('input').value || 0;
+      const kirim = cells[6].querySelector('input').value || 0;
 
-    // hapus tombol delete
-    const del = tr.querySelector(".btn-danger");
-    if(del) del.remove();
+      if (!line || !jenis) continue; // skip baris kosong
 
-    return;
+      const { error } = await sb.from('permintaan_barang').insert({
+        tanggal: tanggal.value,
+        brand: brand.value,
+        line, op, jenis, size, paper,
+        permintaan: parseInt(permintaan),
+        kirim: parseInt(kirim)
+      });
+
+      if (!error) berhasil++;
+    }
+
+    alert(`✅ ${berhasil} data berhasil disimpan`);
+
+    // Reset form
+    inputTable.tBodies[0].innerHTML = '';
+    tambahBaris();
+    tanggal.value = '';
+    brand.value = '';
+    loadData();
   }
 
-  // ================= EDIT =================
-  tds[2].innerHTML = toSelect(lineList, tds[2].innerText);
-  tds[3].innerHTML = toSelect(opList, tds[3].innerText);
-  tds[4].innerHTML = toSelect(jenisList, tds[4].innerText);
-  tds[5].innerHTML = toSelect(sizeList, tds[5].innerText);
-  tds[6].innerHTML = toSelect(paperList, tds[6].innerText);
-  tds[7].innerHTML = toInput(tds[7].innerText);
-  tds[8].innerHTML = toInput(tds[8].innerText);
+  // ============== LOAD DATA WITH FILTER ==============
+  async function loadData() {
+    loadingState.style.display = 'block';
+    const tbody = dataTable.tBodies[0];
+    tbody.innerHTML = '';
 
-  // tombol hapus
-  if(!tr.querySelector(".btn-danger")){
-    const delBtn = document.createElement("button");
-    delBtn.className = "btn btn-danger";
-    delBtn.innerText = "🗑️ Hapus";
-    delBtn.onclick = () => hapusData(id, tr);
-    tds[9].appendChild(delBtn);
+    let query = sb.from('permintaan_barang')
+      .select('*')
+      .order('tanggal', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (fTanggal.value) query = query.eq('tanggal', fTanggal.value);
+    if (fBrand.value) query = query.ilike('brand', `%${fBrand.value}%`);
+    if (fLine.value) query = query.eq('line', fLine.value);
+    if (fOP.value) query = query.eq('op', fOP.value);
+    if (fJenis.value) query = query.eq('jenis', fJenis.value);
+    if (fSize.value) query = query.eq('size', fSize.value);
+    if (fPaper.value) query = query.eq('paper', fPaper.value);
+
+    const { data } = await query;
+
+    data.forEach(d => {
+      const row = tbody.insertRow();
+      row.dataset.id = d.id;
+
+      row.innerHTML = `
+        <td data-tanggal="${d.tanggal}">${formatTanggalID(d.tanggal)}</td>
+        <td>${d.brand}</td>
+        <td>${d.line}</td>
+        <td>${d.op}</td>
+        <td>${d.jenis}</td>
+        <td>${d.size}</td>
+        <td>${d.paper}</td>
+        <td>${d.permintaan}</td>
+        <td>${d.kirim}</td>
+        <td>
+          <button class="btn btn-warning" style="padding:6px 12px;" onclick="editRow(this)">✏️ Edit</button>
+        </td>
+      `;
+    });
+
+    loadingState.style.display = 'none';
   }
 
-  btn.innerText = "💾 Save";
-  btn.dataset.mode = "edit";
-  btn.classList.remove("btn-warning");
-  btn.classList.add("btn-success");
-}
+  // ============== EDIT ROW ==============
+  window.editRow = async function(btn) {
+    const tr = btn.closest('tr');
+    const id = tr.dataset.id;
+    const tds = tr.querySelectorAll('td');
 
-// ================= HAPUS =================
-async function hapusData(id, tr){
-  if(!confirm("Yakin hapus data ini?")) return;
+    // If already in edit mode (save)
+    if (btn.innerText.includes('💾')) {
+      const payload = {
+        line: tds[2].querySelector('select').value,
+        op: tds[3].querySelector('select').value,
+        jenis: tds[4].querySelector('select').value,
+        size: tds[5].querySelector('select').value,
+        paper: tds[6].querySelector('select').value,
+        permintaan: Number(tds[7].querySelector('input').value) || 0,
+        kirim: Number(tds[8].querySelector('input').value) || 0
+      };
 
-  const { error } = await sb
-    .from("permintaan_barang")
-    .delete()
-    .eq("id", id);
+      const { error } = await sb.from('permintaan_barang').update(payload).eq('id', id);
+      if (error) {
+        alert(error.message);
+        return;
+      }
 
-  if(error){
-    alert(error.message);
-    return;
-  }
+      // restore view
+      tds[2].innerText = payload.line;
+      tds[3].innerText = payload.op;
+      tds[4].innerText = payload.jenis;
+      tds[5].innerText = payload.size;
+      tds[6].innerText = payload.paper;
+      tds[7].innerText = payload.permintaan;
+      tds[8].innerText = payload.kirim;
 
-  tr.remove();
-}
+      btn.innerText = '✏️ Edit';
+      btn.classList.remove('btn-success');
+      btn.classList.add('btn-warning');
 
-const sb = supabase.createClient(  
-  "https://gnpjzhwbjeidabxdturx.supabase.co",  
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImducGp6aHdiamVpZGFieGR0dXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODc4NTUsImV4cCI6MjA4MzM2Mzg1NX0.Lsdt0mC1MCPeUATPukRRnXFwEpsaQdNzs927086vxjY"  
-);  
-  
-const inputTable = document.getElementById('inputTable');  
-const dataTable  = document.getElementById('dataTable');  
-const loadingState = document.getElementById('loadingState');  
-  
-const lineList  = ["LINE 1","LINE 2","LINE 3","LINE 4","LINE 5","LINE 6","TRAINING","MACHINE","GUDANG","QC","PENGAWAS","LEADER","OFFICE"];  
-const opList    = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"];  
-const jenisList = ["BOOKLET","FILTER PRINTED","FILTER WHITE","FILTER BROWN","PAPERS","COVER","MAGNET","PLAT","GRINDER","DOUBLE TAPE","DISPLAY"];  
-const sizeList  = ["SINGLE","1 1/4","KS","KSS","KSSS","SKS","70 MM","83 MM","84 MM","109 MM","110 MM","115 MM"];  
-const paperList = ["32 LEAVES","33 LEAVES","35 LEAVES","40 LEAVES","42 LEAVES","50 LEAVES","51 LEAVES","52 LEAVES"];  
-  
-const optFilter = a => `<option value="">-- semua --</option>` + a.map(v=>`<option>${v}</option>`).join('');  
-const optInput  = a => `<option value="">-- pilih --</option>` + a.map(v=>`<option>${v}</option>`).join('');  
-  
-fLine.innerHTML  = optFilter(lineList);  
-fOP.innerHTML    = optFilter(opList);  
-fJenis.innerHTML = optFilter(jenisList);  
-fSize.innerHTML  = optFilter(sizeList);  
-fPaper.innerHTML = optFilter(paperList);  
-  
-  
-function tambahBaris(){  
-  const tbody = inputTable.tBodies[0];  
-  const lastRow = tbody.rows[tbody.rows.length - 1];  
-  
-  const r = tbody.insertRow();  
-  
-  const lastVal = i =>  
-    lastRow ? lastRow.cells[i].children[0].value : "";  
-  
-  r.innerHTML = `  
-    <td><select>${optInput(lineList)}</select></td>  
-    <td><select>${optInput(opList)}</select></td>  
-    <td><select>${optInput(jenisList)}</select></td>  
-    <td><select>${optInput(sizeList)}</select></td>  
-    <td><select>${optInput(paperList)}</select></td>  
-    <td><input type="number"></td>  
-    <td><input type="number"></td>  
-    <td><button onclick="this.closest('tr').remove()">🗑️</button></td>  
-  `;  
-  
-  if(lastRow){  
-    r.cells[0].children[0].value = lastVal(0);  
-    r.cells[1].children[0].value = lastVal(1);  
-    r.cells[2].children[0].value = lastVal(2);  
-    r.cells[3].children[0].value = lastVal(3);  
-    r.cells[4].children[0].value = lastVal(4);  
-  }  
-}  
-  
-  
-async function simpanData(){  
-  if(!tanggal.value || !brand.value) return alert('Tanggal & Brand wajib diisi');  
-  
-  for(const r of inputTable.tBodies[0].rows){  
-    const c = r.cells;  
-    if(!c[0].children[0].value || !c[2].children[0].value) continue;  
-  
-    await sb.from('permintaan_barang').insert({  
-      tanggal: tanggal.value,  
-      brand: brand.value,  
-      line: c[0].children[0].value,  
-      op: c[1].children[0].value,  
-      jenis: c[2].children[0].value,  
-      size: c[3].children[0].value,  
-      paper: c[4].children[0].value,  
-      permintaan: c[5].children[0].value || 0,  
-      kirim: c[6].children[0].value || 0  
-    });  
-  }  
-  
-  inputTable.tBodies[0].innerHTML='';  
-  tambahBaris();  
-  loadData();  
-}  
-  
-async function loadData(){  
-  loadingState.style.display='block';  
-  dataTable.tBodies[0].innerHTML='';  
-  
-  let q = sb.from('permintaan_barang')
-  .select('*')
-  .order('tanggal', { ascending: false })
-  .order('created_at', { ascending: false });
-  if(fTanggal.value) q=q.eq('tanggal',fTanggal.value);  
-  if(fBrand.value)   q=q.ilike('brand','%'+fBrand.value+'%');  
-  if(fLine.value)    q=q.eq('line',fLine.value);  
-  if(fOP.value)      q=q.eq('op',fOP.value);  
-  if(fJenis.value)   q=q.eq('jenis',fJenis.value);  
-  if(fSize.value)    q=q.eq('size',fSize.value);  
-  if(fPaper.value)   q=q.eq('paper',fPaper.value);  
-  
-  const {data=[]} = await q;  
-  
-  data.forEach(d=>{  
-  const r=dataTable.tBodies[0].insertRow();  
-  r.dataset.id = d.id;  
-  
-  r.innerHTML=`  
-    <td data-tanggal="${d.tanggal}">
-  ${formatTanggalID(d.tanggal)}
-</td>
-    <td>${d.brand}</td>  
-  
-    <td contenteditable="false">${d.line}</td>  
-    <td contenteditable="false">${d.op}</td>  
-    <td contenteditable="false">${d.jenis}</td>  
-    <td contenteditable="false">${d.size}</td>  
-    <td contenteditable="false">${d.paper}</td>  
-    <td contenteditable="false">${d.permintaan}</td>  
-    <td contenteditable="false">${d.kirim}</td>  
-  
-    <td>  
-      <button class="btn btn-warning" onclick="editRow(this)">✏️ Edit</button>  
-    </td>  
-  `;  
-});  
-  
-  loadingState.style.display='none';  
-}  
-  
-function kirimWA(){  
-  const t = fTanggal.value || tanggal.value;  
-  const b = fBrand.value || brand.value;  
-  
-  let pesan = `PERMINTAAN BARANG\nTanggal: ${t}\nBrand: ${b}\n\n`;  
-  for(const r of dataTable.tBodies[0].rows){  
-    const c=r.cells;  
-    pesan+=`${c[2].innerText} | ${c[4].innerText} | ${c[7].innerText}/${c[8].innerText}\n`;  
-  }  
-  window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(pesan));  
-}  
-  
-['fTanggal','fLine','fOP','fJenis','fSize','fPaper']  
-  .forEach(id=>document.getElementById(id).addEventListener('change',loadData));  
-fBrand.addEventListener('input',loadData);  
-  
-function kirimExcel(){
-  if(dataTable.tBodies[0].rows.length === 0){
-    alert('Tidak ada data untuk diexport');
-    return;
-  }
+      // remove delete button if exists
+      const delBtn = tr.querySelector('.btn-danger');
+      if (delBtn) delBtn.remove();
 
-  const wb = XLSX.utils.book_new();
-  const wsData = [];
+      return;
+    }
 
-  wsData.push([
-    "Tanggal","Brand","Line","OP",
-    "Jenis","Size","Paper","Permintaan","Kirim"
-  ]);
+    // ENTER EDIT MODE
+    function toSelect(list, val) {
+      let html = '<select>';
+      list.forEach(v => html += `<option ${v === val ? 'selected' : ''}>${v}</option>`);
+      html += '</select>';
+      return html;
+    }
+    function toInput(val) {
+      return `<input type="number" value="${val}" min="0">`;
+    }
 
-  // ambil data → array object
-  const rows = Array.from(dataTable.tBodies[0].rows).map(r => ({
-    tanggalRaw : r.cells[0].dataset.tanggal, // yyyy-mm-dd
-    tanggalID  : formatTanggalID(r.cells[0].dataset.tanggal),
-    brand      : r.cells[1].innerText,
-    line       : r.cells[2].innerText,
-    op         : r.cells[3].innerText,
-    jenis      : r.cells[4].innerText,
-    size       : r.cells[5].innerText,
-    paper      : r.cells[6].innerText,
-    permintaan : r.cells[7].innerText,
-    kirim      : r.cells[8].innerText
-  }));
+    tds[2].innerHTML = toSelect(lineList, tds[2].innerText);
+    tds[3].innerHTML = toSelect(opList, tds[3].innerText);
+    tds[4].innerHTML = toSelect(jenisList, tds[4].innerText);
+    tds[5].innerHTML = toSelect(sizeList, tds[5].innerText);
+    tds[6].innerHTML = toSelect(paperList, tds[6].innerText);
+    tds[7].innerHTML = toInput(tds[7].innerText);
+    tds[8].innerHTML = toInput(tds[8].innerText);
 
-  // SORT: tanggal lama ➜ atas, terbaru ➜ bawah
-  rows.sort((a,b)=> new Date(a.tanggalRaw) - new Date(b.tanggalRaw));
+    // add delete button
+    if (!tr.querySelector('.btn-danger')) {
+      const del = document.createElement('button');
+      del.className = 'btn btn-danger';
+      del.style.padding = '6px 12px';
+      del.innerText = '🗑️ Hapus';
+      del.onclick = () => hapusData(id, tr);
+      tds[9].appendChild(del);
+    }
 
-  // push ke excel
-  rows.forEach(d=>{
-    wsData.push([
-      d.tanggalID,   // dd/mm/yyyy
-      d.brand,
-      d.line,
-      d.op,
-      d.jenis,
-      d.size,
-      d.paper,
-      d.permintaan,
-      d.kirim
-    ]);
+    btn.innerText = '💾 Simpan';
+    btn.classList.remove('btn-warning');
+    btn.classList.add('btn-success');
+  };
+
+  // ============== DELETE DATA ==============
+  window.hapusData = async function(id, tr) {
+    if (!confirm('Yakin hapus data ini?')) return;
+    const { error } = await sb.from('permintaan_barang').delete().eq('id', id);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    tr.remove();
+  };
+
+  // ============== KIRIM WA ==============
+  window.kirimWA = function() {
+    const t = fTanggal.value || tanggal.value || 'Semua';
+    const b = fBrand.value || brand.value || 'Semua';
+    let pesan = `📦 *PERMINTAAN BARANG*\nTanggal: ${t}\nBrand: ${b}\n\n`;
+
+    const rows = dataTable.tBodies[0].rows;
+    if (rows.length === 0) {
+      alert('Tidak ada data');
+      return;
+    }
+
+    for (let r of rows) {
+      const c = r.cells;
+      pesan += `• ${c[2].innerText} | ${c[4].innerText} | ${c[7].innerText}/${c[8].innerText}\n`;
+    }
+    window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(pesan));
+  };
+
+  // ============== KIRIM EXCEL ==============
+  window.kirimExcel = function() {
+    const tbody = dataTable.tBodies[0];
+    if (tbody.rows.length === 0) {
+      alert('Tidak ada data untuk diexport');
+      return;
+    }
+
+    const rows = Array.from(tbody.rows).map(r => ({
+      tanggalRaw: r.cells[0].dataset.tanggal,
+      tanggalID: formatTanggalID(r.cells[0].dataset.tanggal),
+      brand: r.cells[1].innerText,
+      line: r.cells[2].innerText,
+      op: r.cells[3].innerText,
+      jenis: r.cells[4].innerText,
+      size: r.cells[5].innerText,
+      paper: r.cells[6].innerText,
+      permintaan: r.cells[7].innerText,
+      kirim: r.cells[8].innerText
+    }));
+
+    rows.sort((a, b) => new Date(a.tanggalRaw) - new Date(b.tanggalRaw));
+
+    const wsData = [
+      ['Tanggal', 'Brand', 'Line', 'OP', 'Jenis', 'Size', 'Paper', 'Permintaan', 'Kirim']
+    ];
+    rows.forEach(d => {
+      wsData.push([d.tanggalID, d.brand, d.line, d.op, d.jenis, d.size, d.paper, d.permintaan, d.kirim]);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Permintaan Barang');
+    XLSX.writeFile(wb, `Permintaan_${fTanggal.value || 'Semua'}_${fBrand.value || 'Semua'}.xlsx`);
+  };
+
+  // ============== EVENT LISTENERS ==============
+  [fTanggal, fLine, fOP, fJenis, fSize, fPaper].forEach(el => {
+    el.addEventListener('change', loadData);
   });
+  fBrand.addEventListener('input', loadData);
 
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  XLSX.utils.book_append_sheet(wb, ws, "Permintaan Barang");
-
-  const t = fTanggal.value || tanggal.value || 'ALL';
-  const b = fBrand.value || brand.value || 'ALL';
-
-  XLSX.writeFile(wb, `Permintaan_Barang_${t}_${b}.xlsx`);
-}
-  function formatTanggalID(tgl){
-  if(!tgl) return '';
-  const d = new Date(tgl);
-  const dd = String(d.getDate()).padStart(2,'0');
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
-  
-tanggal.valueAsDate=new Date();  
-tambahBaris();  
-loadData();  
-</script>  </body>  
-</html>  
-OK?
+  // ============== INIT ==============
+  tanggal.valueAsDate = new Date();
+  tambahBaris();
+  loadData();
+</script>
+</body>
+</html>
