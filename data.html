@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Data Permintaan Barang</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f1f5f9;
+      padding: 12px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      background: white;
+      padding: 16px;
+      border-radius: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .app-header h1 {
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-link {
+      background: #2563eb;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 40px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 28px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px -8px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .card-header h3 {
+      font-size: 1.2rem;
+      color: #0f172a;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .filter-grid input,
+    .filter-grid select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 18px;
+      border: 1.5px solid #e2e8f0;
+      font-size: 14px;
+      background: #f8fafc;
+      outline: none;
+    }
+
+    .table-wrapper {
+      background: #f8fafc;
+      border-radius: 20px;
+      border: 1.5px solid #e2e8f0;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1000px;
+      font-size: 12px;
+    }
+
+    th {
+      background: #2563eb;
+      color: white;
+      padding: 14px 6px;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 6px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: center;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: 0.2s;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-success {
+      background: #16a34a;
+      color: white;
+    }
+
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-outline {
+      background: white;
+      border: 1.5px solid #2563eb;
+      color: #2563eb;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .pagination button {
+      padding: 10px 16px;
+      border-radius: 40px;
+      border: 1px solid #e2e8f0;
+      background: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .pagination button.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 2px dashed #e2e8f0;
+    }
+
+    .total-badge {
+      background: #e6f7e6;
+      color: #16a34a;
+      padding: 6px 16px;
+      border-radius: 40px;
+      font-weight: 600;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #64748b;
+    }
+
+    .error-message {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 16px;
+      border-radius: 16px;
+      margin: 10px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="app-header">
+    <h1>📊 Data Permintaan</h1>
+    <a href="index.html" class="nav-link">⬅ Kembali</a>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="card">
+    <div class="card-header">
+      <span style="font-size: 1.8rem;">🔍</span>
+      <h3>Filter Data</h3>
+    </div>
+    
+    <div class="filter-grid">
+      <input type="date" id="fTanggal" placeholder="Tanggal">
+      <input type="text" id="fBrand" placeholder="Cari Brand">
+      <select id="fLine"><option value="">Semua Line</option></select>
+      <select id="fOP"><option value="">Semua OP</option></select>
+      <select id="fJenis"><option value="">Semua Jenis</option></select>
+      <select id="fSize"><option value="">Semua Size</option></select>
+      <select id="fPaper"><option value="">Semua Paper</option></select>
+      <button class="btn btn-outline" id="btnResetFilter" style="width:100%;">⟲ Reset Filter</button>
+    </div>
+  </div>
+
+  <!-- Data Card -->
+  <div class="card">
+    <div class="card-header">
+      <span style="font-size: 1.8rem;">📋</span>
+      <h3>Data Tersimpan</h3>
+    </div>
+
+    <div id="loadingState" class="loading" style="display:block;">⏳ Memuat data...</div>
+    <div id="errorContainer" class="error-message" style="display:none;"></div>
+
+    <div class="table-wrapper">
+      <div class="table-responsive">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>Tanggal</th><th>Brand</th><th>Line</th><th>OP</th>
+              <th>Jenis</th><th>Size</th><th>Paper</th>
+              <th>Permintaan</th><th>Kirim</th><th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination">
+      <button id="prevPage" disabled>◀ Sebelumnya</button>
+      <span id="pageInfo">Halaman 1</span>
+      <button id="nextPage" disabled>Berikutnya ▶</button>
+    </div>
+
+    <div class="stats">
+      <span class="total-badge" id="totalData">0 item</span>
+      <span style="color:#64748b; font-size:0.85rem;">20 data per halaman</span>
+    </div>
+
+    <!-- Export Buttons -->
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button id="btnExcel" class="btn btn-primary" style="flex:1;">📄 Export Excel</button>
+      <button id="btnWA" class="btn btn-success" style="flex:1;">📲 Kirim WA</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============== SUPABASE INIT ==============
+  const SUPABASE_URL = "https://gnpjzhwbjeidabxdturx.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImducGp6aHdiamVpZGFieGR0dXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODc4NTUsImV4cCI6MjA4MzM2Mzg1NX0.Lsdt0mC1MCPeUATPukRRnXFwEpsaQdNzs927086vxjY";
+  
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ============== DATA DROPDOWN ==============
+  const lineList  = ["LINE 1","LINE 2","LINE 3","LINE 4","LINE 5","LINE 6","TRAINING","MACHINE","GUDANG","QC","PENGAWAS","LEADER","OFFICE"];
+  const opList    = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"];
+  const jenisList = ["BOOKLET","FILTER PRINTED","FILTER WHITE","FILTER BROWN","PAPERS","COVER","MAGNET","PLAT","GRINDER","DOUBLE TAPE","DISPLAY"];
+  const sizeList  = ["SINGLE","1 1/4","KS","KSS","KSSS","SKS","70 MM","83 MM","84 MM","109 MM","110 MM","115 MM"];
+  const paperList = ["32 LEAVES","33 LEAVES","35 LEAVES","40 LEAVES","42 LEAVES","50 LEAVES","51 LEAVES","52 LEAVES"];
+
+  // ============== ELEMEN ==============
+  const dataTable = document.getElementById('dataTable');
+  const loadingState = document.getElementById('loadingState');
+  const errorContainer = document.getElementById('errorContainer');
+  const totalSpan = document.getElementById('totalData');
+  
+  // Filter
+  const fTanggal = document.getElementById('fTanggal');
+  const fBrand = document.getElementById('fBrand');
+  const fLine = document.getElementById('fLine');
+  const fOP = document.getElementById('fOP');
+  const fJenis = document.getElementById('fJenis');
+  const fSize = document.getElementById('fSize');
+  const fPaper = document.getElementById('fPaper');
+  const btnReset = document.getElementById('btnResetFilter');
+
+  // Pagination
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+  const pageInfo = document.getElementById('pageInfo');
+
+  // Export
+  const btnExcel = document.getElementById('btnExcel');
+  const btnWA = document.getElementById('btnWA');
+
+  // ============== STATE ==============
+  let currentPage = 1;
+  const pageSize = 20;
+  let totalData = 0;
+  let totalPages = 1;
+  let currentData = [];
+
+  // ============== FORMAT DATE ==============
+  function formatTanggalID(tgl) {
+    if (!tgl) return '-';
+    try {
+      const d = new Date(tgl);
+      if (isNaN(d)) return tgl;
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    } catch {
+      return tgl;
+    }
+  }
+
+  // ============== FILL FILTER DROPDOWNS ==============
+  function fillFilterDropdowns() {
+    const lists = [
+      {el: fLine, list: lineList},
+      {el: fOP, list: opList},
+      {el: fJenis, list: jenisList},
+      {el: fSize, list: sizeList},
+      {el: fPaper, list: paperList}
+    ];
+    
+    lists.forEach(({el, list}) => {
+      el.innerHTML = '<option value="">Semua</option>';
+      list.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`);
+    });
+  }
+  fillFilterDropdowns();
+
+  // ============== BUILD QUERY FILTER ==============
+  function buildQuery() {
+    let query = sb.from('permintaan_barang').select('*', { count: 'exact', head: false });
+    
+    if (fTanggal.value) query = query.eq('tanggal', fTanggal.value);
+    if (fBrand.value) query = query.ilike('brand', `%${fBrand.value}%`);
+    if (fLine.value) query = query.eq('line', fLine.value);
+    if (fOP.value) query = query.eq('op', fOP.value);
+    if (fJenis.value) query = query.eq('jenis', fJenis.value);
+    if (fSize.value) query = query.eq('size', fSize.value);
+    if (fPaper.value) query = query.eq('paper', fPaper.value);
+    
+    return query;
+  }
+
+  // ============== LOAD DATA WITH PAGINATION ==============
+  async function loadData() {
+    loadingState.style.display = 'block';
+    errorContainer.style.display = 'none';
+    
+    try {
+      const query = buildQuery();
+      
+      // Hitung total data dulu
+      const { count, error: countError } = await query.select('*', { count: 'exact', head: true });
+      
+      if (countError) throw countError;
+      
+      totalData = count || 0;
+      totalPages = Math.ceil(totalData / pageSize);
+      
+      // Ambil data dengan pagination
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      
+      const { data, error } = await query
+        .order('tanggal', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      
+      if (error) throw error;
+      
+      currentData = data || [];
+      renderTable();
+      updatePagination();
+      
+    } catch (error) {
+      console.error('Error:', error);
+      errorContainer.style.display = 'block';
+      errorContainer.innerHTML = `❌ Error: ${error.message || 'Gagal memuat data'}`;
+      
+      const tbody = dataTable.tBodies[0];
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px;">❌ Gagal memuat data</td></tr>`;
+      
+    } finally {
+      loadingState.style.display = 'none';
+    }
+  }
+
+  // ============== RENDER TABLE ==============
+  function renderTable() {
+    const tbody = dataTable.tBodies[0];
+    tbody.innerHTML = '';
+    
+    if (currentData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px;">📭 Tidak ada data</td></tr>';
+      totalSpan.textContent = '0 item';
+      return;
+    }
+    
+    currentData.forEach(d => {
+      const row = tbody.insertRow();
+      row.dataset.id = d.id;
+      
+      row.innerHTML = `
+        <td>${formatTanggalID(d.tanggal)}</td>
+        <td>${d.brand || '-'}</td>
+        <td>${d.line || '-'}</td>
+        <td>${d.op || '-'}</td>
+        <td>${d.jenis || '-'}</td>
+        <td>${d.size || '-'}</td>
+        <td>${d.paper || '-'}</td>
+        <td>${d.permintaan || '0'}</td>
+        <td>${d.kirim || '0'}</td>
+        <td>
+          <button class="btn btn-warning" style="padding:4px 8px;" onclick="editRow(this)">✏️</button>
+          <button class="btn btn-danger" style="padding:4px 8px;" onclick="deleteRow(this)">🗑️</button>
+        </td>
+      `;
+    });
+    
+    totalSpan.textContent = totalData + ' item';
+  }
+
+  // ============== UPDATE PAGINATION ==============
+  function updatePagination() {
+    pageInfo.textContent = `Halaman ${currentPage} dari ${totalPages || 1}`;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+  }
+
+  // ============== EDIT ROW ==============
+  window.editRow = async function(btn) {
+    const tr = btn.closest('tr');
+    const id = tr.dataset.id;
+    const tds = tr.querySelectorAll('td');
+    
+    if (btn.innerText.includes('💾')) {
+      // Save mode
+      try {
+        const payload = {
+          line: tds[2].querySelector('select')?.value,
+          op: tds[3].querySelector('select')?.value,
+          jenis: tds[4].querySelector('select')?.value,
+          size: tds[5].querySelector('select')?.value,
+          paper: tds[6].querySelector('select')?.value,
+          permintaan: Number(tds[7].querySelector('input')?.value) || 0,
+          kirim: Number(tds[8].querySelector('input')?.value) || 0
+        };
+        
+        const { error } = await sb.from('permintaan_barang').update(payload).eq('id', id);
+        if (error) throw error;
+        
+        // Restore view
+        tds[2].innerText = payload.line;
+        tds[3].innerText = payload.op;
+        tds[4].innerText = payload.jenis;
+        tds[5].innerText = payload.size;
+        tds[6].innerText = payload.paper;
+        tds[7].innerText = payload.permintaan;
+        tds[8].innerText = payload.kirim;
+        
+        btn.innerText = '✏️';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-warning');
+        
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+      return;
+    }
+    
+    // Edit mode
+    function toSelect(list, val) {
+      let html = '<select style="width:100%;">';
+      list.forEach(v => html += `<option ${v === val ? 'selected' : ''}>${v}</option>`);
+      html += '</select>';
+      return html;
+    }
+    
+    tds[2].innerHTML = toSelect(lineList, tds[2].innerText);
+    tds[3].innerHTML = toSelect(opList, tds[3].innerText);
+    tds[4].innerHTML = toSelect(jenisList, tds[4].innerText);
+    tds[5].innerHTML = toSelect(sizeList, tds[5].innerText);
+    tds[6].innerHTML = toSelect(paperList, tds[6].innerText);
+    tds[7].innerHTML = `<input type="number" value="${tds[7].innerText}" style="width:70px;">`;
+    tds[8].innerHTML = `<input type="number" value="${tds[8].innerText}" style="width:70px;">`;
+    
+    btn.innerText = '💾';
+    btn.classList.remove('btn-warning');
+    btn.classList.add('btn-success');
+  };
+
+  // ============== DELETE ROW ==============
+  window.deleteRow = async function(btn) {
+    if (!confirm('Yakin hapus data ini?')) return;
+    
+    const tr = btn.closest('tr');
+    const id = tr.dataset.id;
+    
+    try {
+      const { error } = await sb.from('permintaan_barang').delete().eq('id', id);
+      if (error) throw error;
+      
+      tr.remove();
+      loadData(); // Reload untuk update pagination
+      
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  // ============== EXPORT EXCEL ==============
+  function exportExcel() {
+    if (currentData.length === 0) {
+      alert('Tidak ada data');
+      return;
+    }
+    
+    const wsData = [['Tanggal', 'Brand', 'Line', 'OP', 'Jenis', 'Size', 'Paper', 'Permintaan', 'Kirim']];
+    
+    currentData.forEach(d => {
+      wsData.push([
+        formatTanggalID(d.tanggal),
+        d.brand,
+        d.line,
+        d.op,
+        d.jenis,
+        d.size,
+        d.paper,
+        d.permintaan,
+        d.kirim
+      ]);
+    });
+    
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    XLSX.writeFile(wb, `permintaan_barang_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  // ============== KIRIM WA ==============
+  function kirimWA() {
+    if (currentData.length === 0) {
+      alert('Tidak ada data');
+      return;
+    }
+    
+    let pesan = `📦 *PERMINTAAN BARANG*\nHalaman ${currentPage}\n\n`;
+    currentData.forEach(d => {
+      pesan += `• ${d.line} | ${d.jenis} | ${d.permintaan}/${d.kirim}\n`;
+    });
+    
+    window.open('https://wa.me/?text=' + encodeURIComponent(pesan));
+  }
+
+  // ============== EVENT LISTENERS ==============
+  [fTanggal, fLine, fOP, fJenis, fSize, fPaper].forEach(el => {
+    el.addEventListener('change', () => {
+      currentPage = 1;
+      loadData();
+    });
+  });
+  
+  fBrand.addEventListener('input', () => {
+    currentPage = 1;
+    loadData();
+  });
+  
+  btnReset.addEventListener('click', () => {
+    fTanggal.value = '';
+    fBrand.value = '';
+    fLine.value = '';
+    fOP.value = '';
+    fJenis.value = '';
+    fSize.value = '';
+    fPaper.value = '';
+    currentPage = 1;
+    loadData();
+  });
+  
+  prevBtn.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadData();
+    }
+  });
+  
+  nextBtn.addEventListener('click', () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      loadData();
+    }
+  });
+  
+  btnExcel.addEventListener('click', exportExcel);
+  btnWA.addEventListener('click', kirimWA);
+
+  // ============== INIT ==============
+  loadData();
+</script>
+</body>
+</html>
