@@ -95,6 +95,12 @@
       outline: none;
     }
 
+    .filter-grid input:focus,
+    .filter-grid select:focus {
+      border-color: #2563eb;
+      background: white;
+    }
+
     .table-wrapper {
       background: #f8fafc;
       border-radius: 20px;
@@ -413,7 +419,7 @@
       const to = from + pageSize - 1;
       
       const { data, error } = await query
-        .order('tanggal', { ascending: false })
+        .order('tanggal', { ascending: false })  // 🔴 WEB: DESCENDING (terbaru di atas)
         .order('created_at', { ascending: false })
         .range(from, to);
       
@@ -559,33 +565,50 @@
     }
   };
 
-  // ============== EXPORT EXCEL ==============
-  function exportExcel() {
-    if (currentData.length === 0) {
-      alert('Tidak ada data');
-      return;
+  // ============== EXPORT EXCEL (URUT LAMA → BARU) ==============
+  async function exportExcel() {
+    try {
+      // Ambil SEMUA data yang sesuai filter (tanpa pagination)
+      const query = buildQuery();
+      const { data, error } = await query
+        .order('tanggal', { ascending: true })   // 🟢 EXCEL: ASCENDING (lama di atas, baru di bawah)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        alert('Tidak ada data untuk diexport');
+        return;
+      }
+      
+      // Buat worksheet
+      const wsData = [['Tanggal', 'Brand', 'Line', 'OP', 'Jenis', 'Size', 'Paper', 'Permintaan', 'Kirim']];
+      
+      data.forEach(d => {
+        wsData.push([
+          formatTanggalID(d.tanggal),
+          d.brand,
+          d.line,
+          d.op,
+          d.jenis,
+          d.size,
+          d.paper,
+          d.permintaan,
+          d.kirim
+        ]);
+      });
+      
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+      
+      // Nama file dengan tanggal
+      const tgl = new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb, `permintaan_barang_${tgl}.xlsx`);
+      
+    } catch (err) {
+      alert('Error export: ' + err.message);
     }
-    
-    const wsData = [['Tanggal', 'Brand', 'Line', 'OP', 'Jenis', 'Size', 'Paper', 'Permintaan', 'Kirim']];
-    
-    currentData.forEach(d => {
-      wsData.push([
-        formatTanggalID(d.tanggal),
-        d.brand,
-        d.line,
-        d.op,
-        d.jenis,
-        d.size,
-        d.paper,
-        d.permintaan,
-        d.kirim
-      ]);
-    });
-    
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    XLSX.writeFile(wb, `permintaan_barang_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
   // ============== KIRIM WA ==============
