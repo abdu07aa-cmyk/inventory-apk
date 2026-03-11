@@ -116,7 +116,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1000px;
+      min-width: 1100px; /* Ditambah karena ada kolom No. PO */
       font-size: 12px;
     }
 
@@ -253,6 +253,7 @@
     
     <div class="filter-grid">
       <input type="date" id="fTanggal" placeholder="Tanggal">
+      <input type="text" id="fPO" placeholder="Cari No. PO"> <!-- FILTER NO PO BARU -->
       <input type="text" id="fBrand" placeholder="Cari Brand">
       <select id="fLine"><option value="">Semua Line</option></select>
       <select id="fOP"><option value="">Semua OP</option></select>
@@ -278,7 +279,7 @@
         <table id="dataTable">
           <thead>
             <tr>
-              <th>Tanggal</th><th>Brand</th><th>Line</th><th>OP</th>
+              <th>Tanggal</th><th>No. PO</th><th>Brand</th><th>Line</th><th>OP</th>
               <th>Jenis</th><th>Size</th><th>Paper</th>
               <th>Permintaan</th><th>Kirim</th><th>Aksi</th>
             </tr>
@@ -330,6 +331,7 @@
   
   // Filter
   const fTanggal = document.getElementById('fTanggal');
+  const fPO = document.getElementById('fPO'); // Filter No. PO baru
   const fBrand = document.getElementById('fBrand');
   const fLine = document.getElementById('fLine');
   const fOP = document.getElementById('fOP');
@@ -383,11 +385,12 @@
   }
   fillFilterDropdowns();
 
-  // ============== BUILD QUERY FILTER ==============
+  // ============== BUILD QUERY FILTER (DITAMBAH NO. PO) ==============
   function buildQuery() {
     let query = sb.from('permintaan_barang').select('*', { count: 'exact', head: false });
     
     if (fTanggal.value) query = query.eq('tanggal', fTanggal.value);
+    if (fPO.value) query = query.ilike('nopo', `%${fPO.value}%`); // Filter No. PO
     if (fBrand.value) query = query.ilike('brand', `%${fBrand.value}%`);
     if (fLine.value) query = query.eq('line', fLine.value);
     if (fOP.value) query = query.eq('op', fOP.value);
@@ -419,7 +422,7 @@
       const to = from + pageSize - 1;
       
       const { data, error } = await query
-        .order('tanggal', { ascending: false })  // 🔴 WEB: DESCENDING (terbaru di atas)
+        .order('tanggal', { ascending: false })  // TERBARU DI ATAS
         .order('created_at', { ascending: false })
         .range(from, to);
       
@@ -435,20 +438,20 @@
       errorContainer.innerHTML = `❌ Error: ${error.message || 'Gagal memuat data'}`;
       
       const tbody = dataTable.tBodies[0];
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px;">❌ Gagal memuat data</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:30px;">❌ Gagal memuat data</td></tr>`;
       
     } finally {
       loadingState.style.display = 'none';
     }
   }
 
-  // ============== RENDER TABLE ==============
+  // ============== RENDER TABLE (DITAMBAH KOLOM NO. PO) ==============
   function renderTable() {
     const tbody = dataTable.tBodies[0];
     tbody.innerHTML = '';
     
     if (currentData.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px;">📭 Tidak ada data</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px;">📭 Tidak ada data</td></tr>';
       totalSpan.textContent = '0 item';
       return;
     }
@@ -459,6 +462,7 @@
       
       row.innerHTML = `
         <td>${formatTanggalID(d.tanggal)}</td>
+        <td>${d.nopo || '-'}</td> <!-- KOLOM NO PO -->
         <td>${d.brand || '-'}</td>
         <td>${d.line || '-'}</td>
         <td>${d.op || '-'}</td>
@@ -484,7 +488,7 @@
     nextBtn.disabled = currentPage >= totalPages;
   }
 
-  // ============== EDIT ROW ==============
+  // ============== EDIT ROW (DITAMBAH NO. PO) ==============
   window.editRow = async function(btn) {
     const tr = btn.closest('tr');
     const id = tr.dataset.id;
@@ -494,26 +498,28 @@
       // Save mode
       try {
         const payload = {
-          line: tds[2].querySelector('select')?.value,
-          op: tds[3].querySelector('select')?.value,
-          jenis: tds[4].querySelector('select')?.value,
-          size: tds[5].querySelector('select')?.value,
-          paper: tds[6].querySelector('select')?.value,
-          permintaan: Number(tds[7].querySelector('input')?.value) || 0,
-          kirim: Number(tds[8].querySelector('input')?.value) || 0
+          nopo: tds[1].querySelector('input')?.value, // No. PO
+          line: tds[3].querySelector('select')?.value,
+          op: tds[4].querySelector('select')?.value,
+          jenis: tds[5].querySelector('select')?.value,
+          size: tds[6].querySelector('select')?.value,
+          paper: tds[7].querySelector('select')?.value,
+          permintaan: Number(tds[8].querySelector('input')?.value) || 0,
+          kirim: Number(tds[9].querySelector('input')?.value) || 0
         };
         
         const { error } = await sb.from('permintaan_barang').update(payload).eq('id', id);
         if (error) throw error;
         
         // Restore view
-        tds[2].innerText = payload.line;
-        tds[3].innerText = payload.op;
-        tds[4].innerText = payload.jenis;
-        tds[5].innerText = payload.size;
-        tds[6].innerText = payload.paper;
-        tds[7].innerText = payload.permintaan;
-        tds[8].innerText = payload.kirim;
+        tds[1].innerText = payload.nopo || '-';
+        tds[3].innerText = payload.line;
+        tds[4].innerText = payload.op;
+        tds[5].innerText = payload.jenis;
+        tds[6].innerText = payload.size;
+        tds[7].innerText = payload.paper;
+        tds[8].innerText = payload.permintaan;
+        tds[9].innerText = payload.kirim;
         
         btn.innerText = '✏️';
         btn.classList.remove('btn-success');
@@ -533,13 +539,17 @@
       return html;
     }
     
-    tds[2].innerHTML = toSelect(lineList, tds[2].innerText);
-    tds[3].innerHTML = toSelect(opList, tds[3].innerText);
-    tds[4].innerHTML = toSelect(jenisList, tds[4].innerText);
-    tds[5].innerHTML = toSelect(sizeList, tds[5].innerText);
-    tds[6].innerHTML = toSelect(paperList, tds[6].innerText);
-    tds[7].innerHTML = `<input type="number" value="${tds[7].innerText}" style="width:70px;">`;
+    // No. PO input teks biasa (bukan select)
+    const currentPO = tds[1].innerText === '-' ? '' : tds[1].innerText;
+    tds[1].innerHTML = `<input type="text" value="${currentPO}" style="width:100%;" placeholder="No. PO">`;
+    
+    tds[3].innerHTML = toSelect(lineList, tds[3].innerText);
+    tds[4].innerHTML = toSelect(opList, tds[4].innerText);
+    tds[5].innerHTML = toSelect(jenisList, tds[5].innerText);
+    tds[6].innerHTML = toSelect(sizeList, tds[6].innerText);
+    tds[7].innerHTML = toSelect(paperList, tds[7].innerText);
     tds[8].innerHTML = `<input type="number" value="${tds[8].innerText}" style="width:70px;">`;
+    tds[9].innerHTML = `<input type="number" value="${tds[9].innerText}" style="width:70px;">`;
     
     btn.innerText = '💾';
     btn.classList.remove('btn-warning');
@@ -565,13 +575,13 @@
     }
   };
 
-  // ============== EXPORT EXCEL (URUT LAMA → BARU) ==============
+  // ============== EXPORT EXCEL (DITAMBAH NO. PO) ==============
   async function exportExcel() {
     try {
       // Ambil SEMUA data yang sesuai filter (tanpa pagination)
       const query = buildQuery();
       const { data, error } = await query
-        .order('tanggal', { ascending: true })   // 🟢 EXCEL: ASCENDING (lama di atas, baru di bawah)
+        .order('tanggal', { ascending: true })   // ASCENDING (lama di atas)
         .order('created_at', { ascending: true });
       
       if (error) throw error;
@@ -581,12 +591,13 @@
         return;
       }
       
-      // Buat worksheet
-      const wsData = [['Tanggal', 'Brand', 'Line', 'OP', 'Jenis', 'Size', 'Paper', 'Permintaan', 'Kirim']];
+      // Buat worksheet dengan kolom No. PO
+      const wsData = [['Tanggal', 'No. PO', 'Brand', 'Line', 'OP', 'Jenis', 'Size', 'Paper', 'Permintaan', 'Kirim']];
       
       data.forEach(d => {
         wsData.push([
           formatTanggalID(d.tanggal),
+          d.nopo || '-',
           d.brand,
           d.line,
           d.op,
@@ -611,7 +622,7 @@
     }
   }
 
-  // ============== KIRIM WA ==============
+  // ============== KIRIM WA (DITAMBAH NO. PO) ==============
   function kirimWA() {
     if (currentData.length === 0) {
       alert('Tidak ada data');
@@ -620,27 +631,30 @@
     
     let pesan = `📦 *PERMINTAAN BARANG*\nHalaman ${currentPage}\n\n`;
     currentData.forEach(d => {
-      pesan += `• ${d.line} | ${d.jenis} | ${d.permintaan}/${d.kirim}\n`;
+      pesan += `• ${formatTanggalID(d.tanggal)} | PO: ${d.nopo || '-'} | ${d.line} | ${d.jenis} | ${d.permintaan}/${d.kirim}\n`;
     });
     
     window.open('https://wa.me/?text=' + encodeURIComponent(pesan));
   }
 
-  // ============== EVENT LISTENERS ==============
-  [fTanggal, fLine, fOP, fJenis, fSize, fPaper].forEach(el => {
+  // ============== EVENT LISTENERS (TAMBAH FILTER PO) ==============
+  [fTanggal, fPO, fLine, fOP, fJenis, fSize, fPaper].forEach(el => {
     el.addEventListener('change', () => {
       currentPage = 1;
       loadData();
     });
   });
   
-  fBrand.addEventListener('input', () => {
-    currentPage = 1;
-    loadData();
+  [fBrand].forEach(el => {
+    el.addEventListener('input', () => {
+      currentPage = 1;
+      loadData();
+    });
   });
   
   btnReset.addEventListener('click', () => {
     fTanggal.value = '';
+    fPO.value = ''; // Reset No. PO
     fBrand.value = '';
     fLine.value = '';
     fOP.value = '';
