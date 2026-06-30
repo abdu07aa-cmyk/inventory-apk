@@ -1,0 +1,556 @@
+/* ================================================================
+   WARUNGKITA PRO MAX - RESPONSIVE
+   ================================================================
+   Media queries untuk semua breakpoints.
+   ================================================================ */
+
+/* ================================================================
+   BREAKPOINTS
+   ================================================================
+   - xs: 0-480px (mobile)
+   - sm: 481-768px (tablet kecil)
+   - md: 769-1024px (tablet besar)
+   - lg: 1025-1440px (desktop)
+   - xl: 1441px+ (large desktop)
+   ================================================================ */
+
+/* ================================================================
+   MOBILE FIRST - BASE STYLES (already in base.css)
+   ================================================================ */
+
+/* ================================================================
+   SMALL MOBILE (0-480px)
+   ================================================================ */
+
+@media (max-width: 480px) {
+    /* Layout */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-3);
+    }
+
+    .charts-row {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-4);
+    }
+
+    /* Header */
+    .app-header {
+        padding: 0 var(--spacing-2);
+        gap: var(--spacing-2);
+        flex-wrap: nowrap;
+    }
+
+    .app-header .header-search kbd {
+        display: none;
+    }
+
+    .app-header .header-actions .shift-status span:last-child {
+        display: none;
+    }
+
+    .app-header .current-time {
+        font-size: var(--font-size-xs);
+        min-width: 50px;
+    }
+
+    /* POS Layout */
+    .pos-layout {
+        flex-direction: column;
+        gap: var(--spacing-4);
+    }
+
+    .pos-products {
+        width: 100%;
+    }
+
+    .pos-cart {
+        width: 100%;
+        max-height: 400px;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-2);
+    }
+
+    .product-card {
+        padding: var(--spacing-2);
+    }
+
+    .product-card .product-emoji {
+        font-size: var(--font-size-2xl);
+    }
+
+    .product-card .product-name {
+        font-size: var(--font-size-xs);
+    }
+
+    .product-card .product-price {
+        font-size: var(--font-size-sm);
+    }
+
+    /* Tables */
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table {
+        font-size: var(--font-size-xs);
+    }
+
+    .table th,
+    .table td {
+        padding: var(--spacing-2) var(--spacing-3);
+        white-space: nowrap;
+    }
+
+    /* Cart */
+    .cart-items {
+        max-height: 200px;
+    }
+
+    .cart-item {
+        padding: var(--spacing-2);
+        gap: var(--spacing-2);
+    }
+
+    .cart-item .item-info {
+        font-size: var(--font-size-xs);
+    }
+
+    /* Forms */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .products-toolbar,
+    .transactions-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .products-toolbar .search-box,
+    .transactions-toolbar .search-box {
+        min-width: unset;
+    }
+
+    .products-toolbar .products-filters,
+    .transactions-toolbar .transactions-filters {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+
+    .products-toolbar select,
+    .transactions-toolbar select,
+    .products-toolbar input,
+    .transactions-toolbar input {
+        min-width: unset;
+        width: 100%;
+    }
+
+    /* Buttons */
+    .btn {
+        padding: var(--spacing-2) var(--spacing-3);
+        font-size: var(--font-size-xs);
+        min-height: 34px;
+    }
+
+    .btn-lg {
+        padding: var(--spacing-2) var(--spacing-4);
+        font-size: var(--font-size-sm);
+        min-height: 40px;
+    }
+
+    .section-header .section-actions .btn {
+        flex: 1;
+        justify-content: center;
+        font-size: var(--font-size-xs);
+    }
+
+    /* Cards */
+    .stat-card {
+        padding: var(--spacing-4);
+        gap: var(--spacing-3);
+    }
+
+    .stat-card .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: var(--font-size-lg);
+    }
+
+    .stat-card .stat-value {
+        font-size: var(--font-size-xl);
+    }
+
+    /* Modal */
+    .modal .modal-content {
+        border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+    }
+
+    .modal-body {
+        padding: var(--spacing-3);
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Payment */
+    .payment-method-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-1);
+    }
+
+    .payment-method-btn {
+        padding: var(--spacing-2);
+        font-size: var(--font-size-xs);
+    }
+
+    .payment-method-btn i {
+        font-size: var(--font-size-xl);
+    }
+
+    /* Chart */
+    .chart-card .chart-container {
+        height: 180px;
+    }
+
+    /* Toolbar */
+    .products-toolbar,
+    .transactions-toolbar {
+        padding: var(--spacing-3);
+    }
+
+    /* Page Section */
+    .page-section {
+        padding: var(--spacing-3);
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-3);
+    }
+
+    .section-header h1 {
+        font-size: var(--font-size-xl);
+    }
+}
+
+/* ================================================================
+   TABLET (481-768px)
+   ================================================================ */
+
+@media (min-width: 481px) and (max-width: 768px) {
+    /* Layout */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-3);
+    }
+
+    .charts-row {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-4);
+    }
+
+    /* POS */
+    .pos-layout {
+        flex-direction: column;
+        gap: var(--spacing-4);
+    }
+
+    .pos-products {
+        width: 100%;
+    }
+
+    .pos-cart {
+        width: 100%;
+        max-height: 450px;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-3);
+    }
+
+    /* Forms */
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .products-toolbar,
+    .transactions-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .products-toolbar .search-box,
+    .transactions-toolbar .search-box {
+        min-width: 180px;
+    }
+
+    /* Payment */
+    .payment-method-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Header */
+    .app-header .header-search {
+        max-width: 300px;
+    }
+
+    /* Section */
+    .page-section {
+        padding: var(--spacing-4);
+    }
+
+    /* Modal */
+    .payment-layout {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-4);
+    }
+}
+
+/* ================================================================
+   TABLET LARGE / SMALL DESKTOP (769-1024px)
+   ================================================================ */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Layout */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .charts-row {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-4);
+    }
+
+    /* POS */
+    .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-3);
+    }
+
+    .pos-cart {
+        width: 340px;
+    }
+
+    /* Forms */
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Payment */
+    .payment-method-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Page Section */
+    .page-section {
+        padding: var(--spacing-5);
+    }
+}
+
+/* ================================================================
+   DESKTOP (1025-1440px)
+   ================================================================ */
+
+@media (min-width: 1025px) and (max-width: 1440px) {
+    /* Layout */
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .charts-row {
+        grid-template-columns: 2fr 1fr;
+        gap: var(--spacing-6);
+    }
+
+    /* POS */
+    .product-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-3);
+    }
+
+    .pos-cart {
+        width: 380px;
+    }
+
+    /* Forms */
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Payment */
+    .payment-method-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ================================================================
+   LARGE DESKTOP (1441px+)
+   ================================================================ */
+
+@media (min-width: 1441px) {
+    .page-section {
+        max-width: 1600px;
+        padding: var(--spacing-8);
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: var(--spacing-4);
+    }
+
+    .pos-cart {
+        width: 420px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-6);
+    }
+
+    .charts-row {
+        gap: var(--spacing-8);
+    }
+}
+
+/* ================================================================
+   PRINT
+   ================================================================ */
+
+@media print {
+    .sidebar,
+    .app-header,
+    .no-print {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+
+    .page-section {
+        display: block !important;
+        padding: var(--spacing-4) !important;
+    }
+
+    .page-section:not(.active) {
+        display: none !important;
+    }
+
+    .card,
+    .stat-card,
+    .chart-card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+
+    .table {
+        font-size: var(--font-size-xs);
+    }
+
+    .modal {
+        display: none !important;
+    }
+}
+
+/* ================================================================
+   DARK MODE RESPONSIVE
+   ================================================================ */
+
+[data-theme="dark"] {
+    @media (max-width: 768px) {
+        .sidebar {
+            background: var(--bg-sidebar);
+        }
+
+        .app-header {
+            background: rgba(15, 23, 42, 0.95);
+        }
+    }
+}
+
+/* ================================================================
+   LANDSCAPE ORIENTATION
+   ================================================================ */
+
+@media (max-height: 600px) and (orientation: landscape) {
+    .sidebar-nav {
+        padding: var(--spacing-2) var(--spacing-3);
+    }
+
+    .sidebar-nav .nav-link {
+        padding: var(--spacing-2) var(--spacing-3);
+        font-size: var(--font-size-xs);
+    }
+
+    .app-header {
+        height: 50px;
+    }
+
+    .app-header .header-search {
+        max-width: 300px;
+    }
+
+    .modal .modal-content {
+        max-height: 95vh;
+    }
+
+    .modal-body {
+        max-height: calc(95vh - 120px);
+    }
+
+    .pos-cart {
+        max-height: 300px;
+    }
+
+    .cart-items {
+        max-height: 150px;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-2);
+    }
+}
+
+/* ================================================================
+   HIGH DPI DISPLAYS
+   ================================================================ */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    /* Sharp text rendering */
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* ================================================================
+   DARK MODE PREFERENCE
+   ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+        /* Dark mode styles already applied via CSS variables */
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    [data-theme="system"] {
+        /* Light mode styles already applied via CSS variables */
+    }
+}
