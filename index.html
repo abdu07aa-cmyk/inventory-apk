@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Supabase JS -->
-<!-- Menjadi ini (pakai CDN yang lebih stabil) -->
-<!-- Ganti dengan ini -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.7/umd/supabase.min.js"></script>
+    
+    <!-- ===== SUPABASE CDN YANG STABIL ===== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.7/umd/supabase.min.js"></script>
+    
     <style>
         /* ===== ALL CSS ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
@@ -144,6 +144,7 @@
         @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } .right-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
         @media (max-width: 768px) { .sidebar { width: 56px; padding: 12px 0; } .sidebar:hover { width: 200px; } .main-content { margin-left: 56px; padding: 16px; } .right-panel { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .payment-methods { grid-template-columns: repeat(2, 1fr); } .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } }
         @media (max-width: 480px) { .sidebar { width: 48px; } .sidebar:hover { width: 180px; } .main-content { margin-left: 48px; padding: 12px; } .page-header h1 { font-size: 18px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; } .stat-card .value { font-size: 20px; } .product-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; } .product-card { padding: 10px 6px; } .product-card .emoji { font-size: 22px; } .product-card .pname { font-size: 11px; } .product-card .pprice { font-size: 13px; } }
+        .loading { text-align: center; padding: 20px; color: #6a7c94; }
     </style>
 </head>
 <body>
@@ -423,29 +424,58 @@
 // ============================================================
 // 1. SUPABASE CONFIG - GANTI DENGAN PUNYA ANDA
 // ============================================================
-// ⚠️ IMPORTANT: Ganti URL dan KEY dengan milik Anda
 const SUPABASE_URL = 'https://marelgsluzshkwxwcjod.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg3MzIsImV4cCI6MjA5ODI4NDczMn0.73CLxhbxhO28UplJU8C1-mtNawlsMegVsORXY7PPzlg';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTk4MjQwNzAsImV4cCI6MjAzNTQwMDA3MH0.YOUR_ACTUAL_KEY'; // GANTI DENGAN KEY ASLI
 
 // ============================================================
-// 2. SUPABASE CLIENT - PAKAI NAMA BERBEDA
+// 2. CEK APAKAH SUPABASE TERLOAD
 // ============================================================
-// ✅ SOLUSI: Pakai nama variable berbeda, bukan "supabase"
-const sb = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
+console.log('Supabase loaded:', typeof supabaseClient);
 
 // ============================================================
-// 3. GLOBAL STATE
+// 3. BUAT SUPABASE CLIENT
+// ============================================================
+let sb = null;
+
+// Coba load dengan berbagai cara
+if (typeof supabaseClient !== 'undefined') {
+    // Cara 1: Pakai supabaseClient global
+    sb = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase client created via supabaseClient');
+} else if (typeof supabase !== 'undefined' && supabase.createClient) {
+    // Cara 2: Pakai supabase global
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase client created via supabase');
+} else {
+    console.error('Supabase library not loaded! Using localStorage fallback.');
+    // Fallback: Pakai localStorage
+    sb = {
+        from: (table) => ({
+            select: () => ({ order: () => ({ then: (cb) => cb({ data: JSON.parse(localStorage.getItem(table) || '[]'), error: null }) }) }),
+            insert: (data) => ({ then: (cb) => { 
+                const existing = JSON.parse(localStorage.getItem(table) || '[]');
+                existing.push(data);
+                localStorage.setItem(table, JSON.stringify(existing));
+                cb({ data: data, error: null });
+            }}),
+            update: (data) => ({ eq: () => ({ then: (cb) => { cb({ data: data, error: null }); } }) }),
+            delete: () => ({ eq: () => ({ then: (cb) => { cb({ data: null, error: null }); } }) })
+        })
+    };
+}
+
+// ============================================================
+// 4. GLOBAL STATE
 // ============================================================
 let products = [];
 let cart = [];
 let transactions = [];
 let selectedPayment = 'cash';
-let paymentAmount = 0;
 let discount = 0;
 let editingProductId = null;
 
 // ============================================================
-// 4. UTILITY FUNCTIONS
+// 5. UTILITY FUNCTIONS
 // ============================================================
 function formatPrice(val) {
     return new Intl.NumberFormat('id-ID').format(Math.round(val || 0));
@@ -466,10 +496,14 @@ function getDateDisplay() {
 }
 
 // ============================================================
-// 5. PRODUCT CRUD (pakai sb, bukan supabase)
+// 6. PRODUCT CRUD
 // ============================================================
 async function loadProducts() {
     try {
+        if (!sb) {
+            loadLocalProducts();
+            return;
+        }
         const { data, error } = await sb
             .from('products')
             .select('*')
@@ -502,47 +536,8 @@ function loadLocalProducts() {
     updateStockSelect();
 }
 
-async function saveProductToDB(product) {
-    try {
-        if (editingProductId) {
-            const { error } = await sb
-                .from('products')
-                .update(product)
-                .eq('id', editingProductId);
-            if (error) throw error;
-            showToast('Produk berhasil diupdate!', 'success');
-        } else {
-            const { error } = await sb
-                .from('products')
-                .insert([product]);
-            if (error) throw error;
-            showToast('Produk berhasil ditambahkan!', 'success');
-        }
-        await loadProducts();
-    } catch (error) {
-        console.error('Error saving product:', error);
-        showToast('Gagal menyimpan produk!', 'error');
-    }
-}
-
-async function deleteProductFromDB(id) {
-    if (!confirm('Yakin ingin menghapus produk ini?')) return;
-    try {
-        const { error } = await sb
-            .from('products')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        showToast('Produk berhasil dihapus!', 'success');
-        await loadProducts();
-    } catch (error) {
-        console.error('Error deleting product:', error);
-        showToast('Gagal menghapus produk!', 'error');
-    }
-}
-
 // ============================================================
-// 6. RENDER FUNCTIONS
+// 7. RENDER FUNCTIONS
 // ============================================================
 function renderProducts() {
     const grid = document.getElementById('productGrid');
@@ -569,7 +564,7 @@ function renderProducts() {
             <div class="pprice">Rp ${formatPrice(p.price)}</div>
             <div class="pstock ${p.stock < 10 ? 'low' : ''}">Stok: ${p.stock}</div>
             <button class="add-btn" onclick="addToCart(${p.id})"><i class="fas fa-plus"></i> Tambah</button>
-            <button class="add-btn" style="background:#fee2e2;color:#dc2626;" onclick="deleteProductFromDB(${p.id})"><i class="fas fa-trash"></i> Hapus</button>
+            <button class="add-btn" style="background:#fee2e2;color:#dc2626;margin-top:4px;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i> Hapus</button>
         </div>
     `).join('');
     
@@ -631,7 +626,7 @@ function updateSummary() {
 }
 
 // ============================================================
-// 7. CART FUNCTIONS
+// 8. CART FUNCTIONS
 // ============================================================
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
@@ -679,8 +674,17 @@ function clearCart() {
     showToast('Keranjang dikosongkan', 'info');
 }
 
+function deleteProduct(id) {
+    if (!confirm('Yakin ingin menghapus produk ini?')) return;
+    products = products.filter(p => p.id !== id);
+    renderProducts();
+    updateStats();
+    updateStockSelect();
+    showToast('Produk dihapus!', 'success');
+}
+
 // ============================================================
-// 8. PAYMENT FUNCTIONS
+// 9. PAYMENT FUNCTIONS
 // ============================================================
 async function processPayment() {
     if (cart.length === 0) {
@@ -705,7 +709,7 @@ async function processPayment() {
         }
     }
     
-    await completeTransaction(total);
+    completeTransaction(total);
 }
 
 function generateQRCode(amount) {
@@ -722,88 +726,52 @@ function generateQRCode(amount) {
     });
 }
 
-async function confirmQRISPayment() {
+function confirmQRISPayment() {
     document.getElementById('qrisModal').style.display = 'none';
     const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0) - discount;
-    await completeTransaction(total);
+    completeTransaction(total);
     showToast('Pembayaran QRIS berhasil!', 'success');
 }
 
-async function completeTransaction(total) {
-    try {
-        const methodNames = { cash: 'Tunai', qris: 'QRIS', bank: 'Transfer Bank', ewallet: 'E-Wallet' };
-        
-        // Pakai sb (bukan supabase)
-        const { data: transaction, error: txError } = await sb
-            .from('transactions')
-            .insert([{
-                total_amount: total,
-                payment_method: methodNames[selectedPayment] || 'Tunai',
-                payment_status: 'completed',
-                customer_name: 'Pelanggan'
-            }])
-            .select()
-            .single();
-            
-        if (txError) throw txError;
-        
-        const items = cart.map(item => ({
-            transaction_id: transaction.id,
-            product_id: item.id,
-            product_name: item.name,
-            quantity: item.qty,
-            price: item.price,
-            subtotal: item.price * item.qty
-        }));
-        
-        const { error: itemsError } = await sb
-            .from('transaction_items')
-            .insert(items);
-            
-        if (itemsError) throw itemsError;
-        
-        for (const item of cart) {
-            const product = products.find(p => p.id === item.id);
-            if (product) {
-                const newStock = Math.max(0, product.stock - item.qty);
-                const { error: updateError } = await sb
-                    .from('products')
-                    .update({ stock: newStock })
-                    .eq('id', item.id);
-                if (updateError) throw updateError;
-                product.stock = newStock;
-            }
-        }
-        
-        transactions.push({
-            date: new Date().toLocaleString('id-ID'),
-            total: total,
-            items: cart.map(i => `${i.name} x${i.qty}`).join(', '),
-            method: methodNames[selectedPayment] || 'Tunai'
-        });
-        
-        cart = [];
-        renderCart();
-        renderProducts();
-        updateStats();
-        document.getElementById('paymentAmount').value = '';
-        
-        const change = selectedPayment === 'cash' ? 
-            (parseFloat(document.getElementById('paymentAmount').value) || 0) - total : 0;
-        showToast(`✅ Transaksi sukses! Total Rp ${formatPrice(total)}${change > 0 ? ', Kembalian Rp ' + formatPrice(change) : ''}`, 'success');
-        
-        document.getElementById('transactionBadge').textContent = transactions.length;
-        
-    } catch (error) {
-        console.error('Error completing transaction:', error);
-        showToast('Gagal menyimpan transaksi!', 'error');
-    }
+function completeTransaction(total) {
+    const methodNames = { cash: 'Tunai', qris: 'QRIS', bank: 'Transfer Bank', ewallet: 'E-Wallet' };
+    
+    transactions.push({
+        date: new Date().toLocaleString('id-ID'),
+        total: total,
+        items: cart.map(i => `${i.name} x${i.qty}`).join(', '),
+        method: methodNames[selectedPayment] || 'Tunai'
+    });
+    
+    // Kurangi stok
+    cart.forEach(cartItem => {
+        const product = products.find(p => p.id === cartItem.id);
+        if (product) product.stock = Math.max(0, product.stock - cartItem.qty);
+    });
+    
+    // Update total sales
+    const totalSales = transactions.reduce((sum, t) => sum + t.total, 0);
+    document.getElementById('totalSales').textContent = `Rp ${formatPrice(totalSales)}`;
+    document.getElementById('todayTransactions').textContent = transactions.length;
+    document.getElementById('transactionBadge').textContent = transactions.length;
+    
+    const change = selectedPayment === 'cash' ? 
+        (parseFloat(document.getElementById('paymentAmount').value) || 0) - total : 0;
+    
+    cart = [];
+    renderCart();
+    renderProducts();
+    updateStats();
+    updateStockSelect();
+    document.getElementById('paymentAmount').value = '';
+    
+    showToast(`✅ Transaksi sukses! Total Rp ${formatPrice(total)}${change > 0 ? ', Kembalian Rp ' + formatPrice(change) : ''}`, 'success');
 }
 
 // ============================================================
-// 9. STOCK IN
+// 10. STOCK IN
 // ============================================================
-async function processStockIn() {
+function processStockIn() {
     const productId = document.getElementById('stockProductSelect').value;
     const qty = parseInt(document.getElementById('stockQty').value) || 0;
     
@@ -812,38 +780,24 @@ async function processStockIn() {
         return;
     }
     
-    try {
-        const product = products.find(p => p.id === parseInt(productId));
-        if (!product) {
-            showToast('Produk tidak ditemukan!', 'error');
-            return;
-        }
-        
-        const newStock = product.stock + qty;
-        const { error } = await sb
-            .from('products')
-            .update({ stock: newStock })
-            .eq('id', productId);
-            
-        if (error) throw error;
-        
-        product.stock = newStock;
-        renderProducts();
-        updateStats();
-        updateStockSelect();
-        showToast(`✅ Stok ${product.name} +${qty}. Total: ${newStock}`, 'success');
-        
-        document.getElementById('stockQty').value = 1;
-        document.getElementById('stockProductSelect').value = '';
-        
-    } catch (error) {
-        console.error('Error updating stock:', error);
-        showToast('Gagal menambah stok!', 'error');
+    const product = products.find(p => p.id === parseInt(productId));
+    if (!product) {
+        showToast('Produk tidak ditemukan!', 'error');
+        return;
     }
+    
+    product.stock += qty;
+    renderProducts();
+    updateStats();
+    updateStockSelect();
+    showToast(`✅ Stok ${product.name} +${qty}. Total: ${product.stock}`, 'success');
+    
+    document.getElementById('stockQty').value = 1;
+    document.getElementById('stockProductSelect').value = '';
 }
 
 // ============================================================
-// 10. AI ASSISTANT
+// 11. AI ASSISTANT
 // ============================================================
 function askAI() {
     const input = document.getElementById('aiInput');
@@ -880,45 +834,14 @@ function askAI() {
 }
 
 // ============================================================
-// 11. LOAD TRANSACTIONS
-// ============================================================
-async function loadTransactions() {
-    try {
-        const { data, error } = await sb
-            .from('transactions')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50);
-            
-        if (error) throw error;
-        
-        transactions = data.map(t => ({
-            date: new Date(t.created_at).toLocaleString('id-ID'),
-            total: t.total_amount,
-            items: 'Lihat detail di database',
-            method: t.payment_method || 'Tunai'
-        }));
-        
-        document.getElementById('transactionBadge').textContent = transactions.length;
-        
-        const totalSales = transactions.reduce((sum, t) => sum + t.total, 0);
-        document.getElementById('totalSales').textContent = `Rp ${formatPrice(totalSales)}`;
-        document.getElementById('todayTransactions').textContent = transactions.length;
-        
-    } catch (error) {
-        console.error('Error loading transactions:', error);
-    }
-}
-
-// ============================================================
 // 12. EVENT LISTENERS
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('dateDisplay').textContent = getDateDisplay();
     
     loadProducts();
-    loadTransactions();
     
+    // Category tabs
     document.querySelectorAll('.cat-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
@@ -927,8 +850,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Search
     document.getElementById('searchInput').addEventListener('input', renderProducts);
     
+    // Sort
     document.getElementById('sortName').addEventListener('click', () => {
         products.sort((a, b) => a.name.localeCompare(b.name));
         renderProducts();
@@ -942,9 +867,13 @@ document.addEventListener('DOMContentLoaded', function() {
         renderProducts();
     });
     
+    // Stock In
     document.getElementById('processStockIn').addEventListener('click', processStockIn);
+    
+    // Cart
     document.getElementById('clearCart').addEventListener('click', clearCart);
     
+    // Payment methods
     document.querySelectorAll('.payment-method').forEach(method => {
         method.addEventListener('click', function() {
             document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('active'));
@@ -964,14 +893,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Payment amount
     document.getElementById('paymentAmount').addEventListener('input', updateSummary);
+    
+    // Process payment
     document.getElementById('processPayment').addEventListener('click', processPayment);
     
+    // QRIS
     document.getElementById('closeQrisModal').addEventListener('click', () => {
         document.getElementById('qrisModal').style.display = 'none';
     });
     document.getElementById('confirmQrisPayment').addEventListener('click', confirmQRISPayment);
     
+    // Product Modal
     document.getElementById('addProductBtn').addEventListener('click', () => {
         editingProductId = null;
         document.getElementById('productModalTitle').textContent = '➕ Tambah Produk Baru';
@@ -987,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('productModal').style.display = 'none';
     });
     
-    document.getElementById('saveProduct').addEventListener('click', async function() {
+    document.getElementById('saveProduct').addEventListener('click', function() {
         const name = document.getElementById('productName').value.trim();
         const category = document.getElementById('productCategory').value;
         const price = parseInt(document.getElementById('productPrice').value) || 0;
@@ -999,10 +933,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        await saveProductToDB({ name, category, price, stock, emoji });
+        const newId = Math.max(...products.map(p => p.id), 0) + 1;
+        products.push({ id: newId, name, category, price, stock, emoji });
+        renderProducts();
+        updateStats();
+        updateStockSelect();
         document.getElementById('productModal').style.display = 'none';
+        showToast(`✅ Produk "${name}" ditambahkan!`, 'success');
     });
     
+    // History
     document.querySelector('[data-page="transactions"]').addEventListener('click', function() {
         document.getElementById('historyModal').style.display = 'flex';
         renderHistory();
@@ -1012,6 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('historyModal').style.display = 'none';
     });
     
+    // AI
     document.getElementById('askAI').addEventListener('click', askAI);
     document.getElementById('aiInput').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') askAI();
@@ -1022,6 +963,7 @@ document.addEventListener('DOMContentLoaded', function() {
         card.style.display = card.style.display === 'none' ? 'block' : 'none';
     });
     
+    // Navigation
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         item.addEventListener('click', function() {
             document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
@@ -1038,6 +980,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', function(e) {
             if (e.target === this) this.style.display = 'none';
