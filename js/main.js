@@ -1,488 +1,205 @@
 /**
- * ================================================================
- * WARUNGKITA PRO MAX - MAIN APPLICATION
- * ================================================================
- * Entry point aplikasi. Inisialisasi semua modul dan state.
- * ================================================================
+ * js/main.js
+ * - Entry point aplikasi WarungKita PRO MAX
+ * - Inisialisasi modul (products, cart, charts), binding UI global, routing ringan, dan event glue
+ *
+ * Prinsip:
+ * - Minimal DOM-manipulation di sini; rendering detail didelegasikan ke modul.
+ * - Menggunakan event-driven flow: modul memancarkan event global saat perlu.
  */
 
-import { state, loadState, subscribe, setOnlineStatus } from './state.js';
-import { showToast, formatCurrency, formatDate, generateId, generateBarcode } from './utils.js';
-import { api } from './api.js';
+import productsModule from './modules/products.js';
+import cartModule from './modules/cart.js';
+import charts from './charts.js';
+import state from './state.js';
+import api from './api.js';
+import utils from './utils.js';
 import { APP_CONFIG } from './config.js';
+import { initOffline } from './features/offline.js';
 
-// Import modules
-import * as Products from './modules/products.js';
-import * as Cart from './modules/cart.js';
-import * as Payment from './modules/payment.js';
-import * as Stock from './modules/stock.js';
-import * as AI from './modules/ai.js';
+/* Helper: simple route switch by data-route attribute */
+function showView(route) {
+  // Hide all .view then show the one with id = view-<route>
+  const views = document.querySelectorAll('.view');
+  views.forEach(v => v.hidden = true);
+  const active = document.querySelector(`#view-${route}`);
+  if (active) {
+    active.hidden = false;
+    // Focus main content for accessibility
+    active.querySelector('input, button, [tabindex]')?.focus();
+  }
 
-// Import events
-import {
-    setupNavigation,
-    setupKeyboardShortcuts,
-    setupGlobalSearch,
-    setupModalEvents,
-    setupProductEvents,
-    setupCartEvents,
-    setupPaymentEvents,
-    setupStockEvents,
-    setupAIEvents,
-    setupShiftEvents,
-    setupThemeEvents,
-    setupSettingsEvents,
-    navigateToSection,
-    refreshDashboard
-} from './events.js';
-
-// ================================================================
-// APP INITIALIZATION
-// ================================================================
-
-/**
- * Initialize application
- */
-export async function initApp() {
-    console.log(`🚀 ${APP_CONFIG.appName} v${APP_CONFIG.appVersion} starting...`);
-
-    // 1. Load state from storage
-    loadState();
-
-    // 2. Setup Supabase API
-    setupSupabase();
-
-    // 3. Setup event listeners
-    setupEventListeners();
-
-    // 4. Load data
-    await loadData();
-
-    // 5. Render initial UI
-    renderInitialUI();
-
-    // 6. Setup online/offline detection
-    setupOnlineDetection();
-
-    // 7. Handle URL hash
-    handleHashChange();
-
-    // 8. Update clock
-    updateClock();
-    setInterval(updateClock, 10000);
-
-    console.log(`✅ ${APP_CONFIG.appName} ready!`);
+  // Toggle active link
+  document.querySelectorAll('.nav-main a').forEach(a => {
+    a.classList.toggle('active', a.dataset.route === route);
+  });
 }
 
-// ================================================================
-// SUPABASE SETUP
-// ================================================================
-
-/**
- * Setup Supabase API
- */
-function setupSupabase() {
-    // Try to get API key from localStorage
-    const savedKey = localStorage.getItem('supabase-key');
-    if (savedKey) {
-        api.setApiKey(savedKey);
-        console.log('🔑 Supabase API key loaded from storage');
-    } else {
-        // Prompt for API key if not set
-        const key = prompt('Masukkan Supabase API Key:', '');
-        if (key) {
-            api.setApiKey(key);
-            localStorage.setItem('supabase-key', key);
-            console.log('🔑 Supabase API key saved');
-        } else {
-            console.warn('⚠️ No Supabase API key provided. Using local storage only.');
-        }
-    }
-
-    // Check connection
-    api.checkConnection().then(connected => {
-        setOnlineStatus(connected);
-        updateConnectionStatus(connected);
+/* Bind navigation links in sidebar */
+function bindNavigation() {
+  document.querySelectorAll('.nav-main a[data-route]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const route = a.dataset.route;
+      showView(route);
+      // Update history (optional)
+      history.pushState({ route }, '', `#${route}`);
     });
+  });
+
+  // handle back/forward
+  window.addEventListener('popstate', (ev) => {
+    const route = (ev.state && ev.state.route) || location.hash.replace('#', '') || 'dashboard';
+    showView(route);
+  });
 }
 
-// ================================================================
-// EVENT LISTENERS
-// ================================================================
+/* Theme toggle handling */
+function initThemeToggle() {
+  const btn = document.getElementById('toggle-theme');
+  const body = document.body;
+  // Apply saved theme from state
+  const theme = state.getState().settings?.theme || APP_CONFIG.defaultTheme || 'light';
+  body.setAttribute('data-theme', theme);
 
-/**
- * Setup all event listeners
- */
-function setupEventListeners() {
-    setupNavigation();
-    setupKeyboardShortcuts();
-    setupGlobalSearch();
-    setupModalEvents();
-    setupProductEvents();
-    setupCartEvents();
-    setupPaymentEvents();
-    setupStockEvents();
-    setupAIEvents();
-    setupShiftEvents();
-    setupThemeEvents();
-    setupSettingsEvents();
-
-    // Handle hash change for navigation
-    window.addEventListener('hashchange', handleHashChange);
-
-    // State subscription for UI updates
-    subscribe((newState, action, data) => {
-        handleStateChange(action, data);
+  // Update aria-pressed and icon state if needed
+  if (btn) {
+    btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+    btn.addEventListener('click', () => {
+      const current = body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      body.setAttribute('data-theme', next);
+      btn.setAttribute('aria-pressed', next === 'dark' ? 'true' : 'false');
+      // Persist to state
+      state.setState({ settings: { ...(state.getState().settings || {}), theme: next } });
+      utils.toast(`Mode ${next === 'dark' ? 'gelap' : 'terang'} diaktifkan`, { type: 'info' });
     });
+  }
 }
 
-// ================================================================
-// DATA LOADING
-// ================================================================
-
-/**
- * Load all data
- */
-async function loadData() {
-    try {
-        // Load products
-        await Products.loadProductsData();
-
-        // Load customers if empty
-        if (state.customers.length === 0) {
-            loadSampleCustomers();
-        }
-
-        // Render all sections
-        Products.renderProducts();
-        Products.renderProductGrid();
-        Cart.renderCart();
-        Stock.renderLowStockAlerts();
-        Stock.renderLowStockList();
-        Stock.updateStockStats();
-        refreshDashboard();
-
-        console.log(`📦 Loaded ${state.products.length} products`);
-        console.log(`📋 Loaded ${state.transactions.length} transactions`);
-        console.log(`👥 Loaded ${state.customers.length} customers`);
-        console.log(`⏰ Loaded ${state.shifts.length} shifts`);
-
-    } catch (error) {
-        console.error('Failed to load data:', error);
-        showToast('Gagal memuat data', 'error');
+/* Sidebar toggle for small screens */
+function initSidebarToggle() {
+  const openBtn = document.getElementById('open-sidebar');
+  const appLayout = document.querySelector('.app-layout');
+  if (!openBtn || !appLayout) return;
+  openBtn.addEventListener('click', () => {
+    appLayout.classList.toggle('sidebar-open');
+  });
+  // Close sidebar when clicking outside (mobile)
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.sidebar') && !e.target.closest('#open-sidebar')) {
+      appLayout.classList.remove('sidebar-open');
     }
+  });
 }
 
-/**
- * Load sample customers
- */
-function loadSampleCustomers() {
-    const sampleCustomers = [
-        { name: 'Budi Santoso', phone: '081234567890', points: 150 },
-        { name: 'Siti Rahayu', phone: '081298765432', points: 75 },
-        { name: 'Agus Wijaya', phone: '081355577788', points: 200 },
-        { name: 'Dewi Lestari', phone: '081277788899', points: 50 }
-    ];
-
-    sampleCustomers.forEach(c => {
-        const customer = {
-            id: generateId('CUST'),
-            ...c,
-            created_at: new Date().toISOString()
-        };
-        state.customers.push(customer);
-    });
-
-    localStorage.setItem('warungkita-customers', JSON.stringify(state.customers));
-}
-
-// ================================================================
-// UI RENDERING
-// ================================================================
-
-/**
- * Render initial UI
- */
-function renderInitialUI() {
-    // Update time
-    updateClock();
-
-    // Update shift status
-    updateShiftUI();
-
-    // Update connection status
-    updateConnectionStatus(navigator.onLine);
-
-    // Show initial section from hash or default
-    const hash = window.location.hash.replace('#', '') || 'dashboard';
-    navigateToSection(hash);
-
-    // Apply saved theme
-    const savedTheme = localStorage.getItem('warungkita-theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-}
-
-/**
- * Update clock
- */
-function updateClock() {
-    const el = document.getElementById('currentTime');
-    if (el) {
-        el.textContent = new Date().toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+/* Global search (simple) */
+function initGlobalSearch() {
+  const input = document.getElementById('global-search');
+  if (!input) return;
+  input.addEventListener('input', utils.debounce((e) => {
+    const q = e.target.value;
+    if (!q) return;
+    // Navigate to products view and apply filter via dispatch to products module
+    showView('products');
+    // If there's a filter input in toolbar, set its value and trigger input event (so products module handles it)
+    const toolbarInput = document.querySelector('#products-toolbar input[type="search"], #products-filter');
+    if (toolbarInput) {
+      toolbarInput.value = q;
+      toolbarInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
+  }, 220));
 }
 
-/**
- * Update shift status UI
- */
-function updateShiftUI() {
-    const container = document.getElementById('shiftStatus');
-    if (!container) return;
-
-    const activeShift = state.shifts.find(s => s.status === 'open');
-
-    if (activeShift) {
-        container.innerHTML = `
-            <span class="status-dot online"></span>
-            <span>Shift #${activeShift.id.slice(-6)}</span>
-        `;
-    } else {
-        container.innerHTML = `
-            <span class="status-dot offline"></span>
-            <span>Offline</span>
-        `;
+/* Initialize sales chart and keep it in sync with transactions state */
+let salesChartInstance = null;
+async function initCharts() {
+  const canvas = document.getElementById('chart-sales');
+  if (!canvas) return;
+  salesChartInstance = charts.initSalesChart(canvas);
+  // Load transactions from API or state and update chart
+  try {
+    const txs = await api.list('transactions');
+    // If returned, ensure state updated
+    if (Array.isArray(txs)) {
+      state.setState({ transactions: txs });
     }
+  } catch (err) {
+    // ignore — state might already have local transactions
+    console.warn('Tidak bisa load transactions untuk chart, gunakan data lokal', err);
+  }
+  // initial update
+  const series = charts.transactionsToSeries(state.getState().transactions || []);
+  charts.updateSalesChart(series);
+
+  // subscribe to state changes for transactions
+  state.addEventListener('state:changed', (ev) => {
+    const st = ev.detail;
+    if (!st) return;
+    const series2 = charts.transactionsToSeries(st.transactions || []);
+    charts.updateSalesChart(series2);
+  });
 }
 
-/**
- * Update connection status
- */
-function updateConnectionStatus(connected) {
-    const container = document.getElementById('shiftStatus');
-    if (!container) return;
-
-    const dot = container.querySelector('.status-dot');
-    const text = container.querySelector('span:last-child');
-
-    if (connected) {
-        dot.className = 'status-dot online';
-        if (text) text.textContent = state.activeShiftId ? 'Online' : 'Online';
-    } else {
-        dot.className = 'status-dot offline';
-        if (text) text.textContent = 'Offline';
-    }
-
-    // Update DB status in settings
-    const dbStatus = document.getElementById('dbStatus');
-    if (dbStatus) {
-        dbStatus.textContent = connected ? '🟢 Online' : '🔴 Offline';
-        dbStatus.style.color = connected ? 'var(--color-success)' : 'var(--color-danger)';
-    }
+/* Bind misc UI items (current year in footer, profile actions) */
+function bindMiscUI() {
+  const y = document.getElementById('current-year');
+  if (y) y.textContent = new Date().getFullYear();
+  // Notifications button
+  const btnNotif = document.getElementById('btn-notifications');
+  if (btnNotif) btnNotif.addEventListener('click', () => {
+    utils.toast('Belum ada notifikasi', { type: 'info' });
+  });
 }
 
-// ================================================================
-// STATE CHANGE HANDLER
-// ================================================================
-
-/**
- * Handle state changes
- */
-function handleStateChange(action, data) {
-    switch (action) {
-        case 'products-loaded':
-        case 'product-added':
-        case 'product-updated':
-        case 'product-deleted':
-            // Refresh product views
-            Products.renderProducts();
-            Products.renderProductGrid();
-            Stock.renderLowStockAlerts();
-            Stock.renderLowStockList();
-            Stock.updateStockStats();
-            break;
-
-        case 'cart-updated':
-            Cart.renderCart();
-            break;
-
-        case 'cart-cleared':
-            Cart.renderCart();
-            break;
-
-        case 'transaction-added':
-            refreshDashboard();
-            renderTransactions();
-            break;
-
-        case 'stock-updated':
-            Products.renderProducts();
-            Products.renderProductGrid();
-            Stock.renderLowStockAlerts();
-            Stock.renderLowStockList();
-            Stock.updateStockStats();
-            break;
-
-        case 'shift-opened':
-        case 'shift-closed':
-            updateShiftUI();
-            renderShifts();
-            break;
-
-        case 'online-status-changed':
-            updateConnectionStatus(data);
-            break;
-
-        case 'theme-changed':
-            // Theme already applied via setTheme
-            break;
-
-        default:
-            // Ignore other actions
-            break;
-    }
+/* Handle transaction created event (receipt, nav, etc) */
+function bindTransactionEvents() {
+  window.addEventListener('warungkita:transaction:created', (e) => {
+    const payload = e.detail?.tx;
+    utils.toast('Transaksi berhasil dibuat', { type: 'success' });
+    // buka view transaksi
+    showView('transactions');
+    // (Placeholder) open receipt modal via custom event; modules/payment.js atau receipt module dapat listen
+    window.dispatchEvent(new CustomEvent('warungkita:receipt:show', { detail: { tx: payload } }));
+  });
 }
 
-// ================================================================
-// HASH CHANGE HANDLER
-// ================================================================
+/* App initialization */
+async function initApp() {
+  // Init UI bindings
+  bindNavigation();
+  initThemeToggle();
+  initSidebarToggle();
+  initGlobalSearch();
+  bindMiscUI();
 
-/**
- * Handle URL hash change
- */
-function handleHashChange() {
-    const hash = window.location.hash.replace('#', '') || 'dashboard';
-    navigateToSection(hash);
+  // Initialize modules
+  productsModule.initProducts({ listSelector: '#products-list', posSelector: '#pos-products', toolbarSelector: '#products-toolbar' });
+  cartModule.initCart({ selector: '#pos-cart' });
+
+  // Init charts
+  await initCharts();
+
+  // Bind transaction events
+  bindTransactionEvents();
+
+  // Init offline manager (sync)
+  initOffline();
+
+  // Apply route from URL hash if present
+  const initialRoute = location.hash.replace('#', '') || 'dashboard';
+  showView(initialRoute);
 }
 
-// ================================================================
-// ONLINE/OFFLINE DETECTION
-// ================================================================
-
-/**
- * Setup online/offline detection
- */
-function setupOnlineDetection() {
-    window.addEventListener('online', () => {
-        setOnlineStatus(true);
-        showToast('🟢 Kembali online', 'success');
-        // Try to sync data
-        syncData();
-    });
-
-    window.addEventListener('offline', () => {
-        setOnlineStatus(false);
-        showToast('🔴 Koneksi terputus. Bekerja offline.', 'warning');
-    });
-}
-
-/**
- * Sync data with server
- */
-async function syncData() {
-    if (!navigator.onLine) return;
-
-    try {
-        const result = await api.syncAll();
-        console.log('Sync result:', result);
-        showToast('Data tersinkronisasi', 'success');
-    } catch (error) {
-        console.error('Sync failed:', error);
-    }
-}
-
-// ================================================================
-// EXPOSE FUNCTIONS TO WINDOW
-// ================================================================
-
-// Expose functions for inline onclick handlers
-window.refreshDashboard = refreshDashboard;
-window.exportDashboard = exportDashboard;
-window.formatCurrency = formatCurrency;
-window.formatDate = formatDate;
-
-/**
- * Export dashboard data
- */
-function exportDashboard() {
-    try {
-        const data = {
-            date: new Date().toISOString(),
-            stats: {
-                todaySales: state.transactions.filter(t => 
-                    t.createdAt?.startsWith(new Date().toISOString().split('T')[0])
-                ).reduce((sum, t) => sum + t.total_amount, 0),
-                totalTransactions: state.transactions.length,
-                totalProductsSold: state.transactions.reduce((sum, t) => {
-                    if (t.items) {
-                        return sum + t.items.reduce((s, item) => s + item.quantity, 0);
-                    }
-                    return sum;
-                }, 0),
-                activeCustomers: state.customers.length
-            },
-            transactions: state.transactions.slice(0, 10)
-        };
-
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `dashboard-export-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('Dashboard berhasil diexport!', 'success');
-    } catch (error) {
-        showToast('Gagal export: ' + error.message, 'error');
-    }
-}
-
-/**
- * Export products
- */
-function exportProducts() {
-    try {
-        const data = state.products.map(p => ({
-            name: p.name,
-            category: p.category,
-            price: p.price,
-            stock: p.stock,
-            emoji: p.emoji,
-            barcode: p.barcode
-        }));
-
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `products-export-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('Produk berhasil diexport!', 'success');
-    } catch (error) {
-        showToast('Gagal export: ' + error.message, 'error');
-    }
-}
-
-// ================================================================
-// START APPLICATION
-// ================================================================
-
-// Start the app when DOM is ready
+/* Wait DOMContentLoaded then init */
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+  document.addEventListener('DOMContentLoaded', initApp);
 } else {
-    initApp();
+  initApp();
 }
 
-// ================================================================
-// EXPORT
-// ================================================================
-
+/* Export for debugging/testing */
 export default {
-    initApp,
-    refreshDashboard,
-    exportDashboard
+  initApp,
+  showView
 };
