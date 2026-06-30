@@ -1,925 +1,159 @@
-<!DOCTYPE html>
-<html lang="id" data-theme="light">
+<!doctype html>
+<html lang="id">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WarungKita PRO MAX - Enterprise POS</title>
-
-    <!-- Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-
-    <!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js">
-    </script>
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/variables.css" />
-    <link rel="stylesheet" href="css/base.css" />
-    <link rel="stylesheet" href="css/components.css" />
-    <link rel="stylesheet" href="css/layout.css" />
-    <link rel="stylesheet" href="css/modals.css" />
-    <link rel="stylesheet" href="css/animations.css" />
-    <link rel="stylesheet" href="css/responsive.css" />
-    <link rel="stylesheet" href="css/print.css" media="print" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#3b82f6" />
+  <title>WarungKita PRO MAX - Enterprise POS</title>
+  <meta name="description" content="Sistem POS modern untuk warung/toko — WarungKita PRO MAX" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="" crossorigin="anonymous" />
+  <!-- Core CSS (modular) -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/modals.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <link rel="stylesheet" href="css/print.css" media="print" />
+  <!-- Favicon placeholder -->
+  <link rel="icon" href="assets/icons/favicon.ico" />
 </head>
+<body class="app-root" data-theme="light">
+  <!-- Accessible skip link -->
+  <a class="skip-link" href="#main">Skip to content</a>
 
-<body>
-    <!-- ============================================================ -->
-    <!-- SIDEBAR NAVIGASI                                              -->
-    <!-- ============================================================ -->
-    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Navigasi Utama">
-        <div class="sidebar-brand">
-            <div class="brand-logo">
-                <i class="fas fa-store"></i>
-                <span>Warung<span class="brand-highlight">Kita</span></span>
-            </div>
-            <span class="brand-badge">PRO MAX</span>
-        </div>
+  <!-- App wrapper -->
+  <div id="app" class="app-layout">
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar" role="navigation" aria-label="Sidebar utama">
+      <div class="brand">
+        <h1 class="brand-title">WarungKita<span class="pro"> PRO MAX</span></h1>
+      </div>
 
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a href="#dashboard" class="nav-link active" data-section="dashboard">
-                        <i class="fas fa-chart-pie"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#pos" class="nav-link" data-section="pos">
-                        <i class="fas fa-cash-register"></i>
-                        <span>Point of Sale</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#products" class="nav-link" data-section="products">
-                        <i class="fas fa-boxes"></i>
-                        <span>Produk</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#transactions" class="nav-link" data-section="transactions">
-                        <i class="fas fa-receipt"></i>
-                        <span>Riwayat</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#stock" class="nav-link" data-section="stock">
-                        <i class="fas fa-warehouse"></i>
-                        <span>Stok</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#customers" class="nav-link" data-section="customers">
-                        <i class="fas fa-users"></i>
-                        <span>Pelanggan</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#shifts" class="nav-link" data-section="shifts">
-                        <i class="fas fa-clock"></i>
-                        <span>Shift</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#settings" class="nav-link" data-section="settings">
-                        <i class="fas fa-cog"></i>
-                        <span>Pengaturan</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
+      <nav class="nav-main" aria-label="Main navigation">
+        <ul>
+          <li><a href="#" data-route="dashboard" class="active"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
+          <li><a href="#" data-route="products"><i class="fa-solid fa-boxes-stacked"></i> Produk</a></li>
+          <li><a href="#" data-route="pos"><i class="fa-solid fa-cash-register"></i> POS</a></li>
+          <li><a href="#" data-route="transactions"><i class="fa-solid fa-receipt"></i> Transaksi</a></li>
+          <li><a href="#" data-route="customers"><i class="fa-solid fa-users"></i> Pelanggan</a></li>
+          <li><a href="#" data-route="shifts"><i class="fa-solid fa-user-clock"></i> Shift</a></li>
+          <li><a href="#" data-route="reports"><i class="fa-solid fa-file-invoice-dollar"></i> Laporan</a></li>
+          <li><a href="#" data-route="settings"><i class="fa-solid fa-gear"></i> Pengaturan</a></li>
+        </ul>
+      </nav>
 
-        <div class="sidebar-footer">
-            <button class="btn-icon" id="themeToggle" title="Toggle Dark Mode (Ctrl+D)">
-                <i class="fas fa-moon"></i>
-            </button>
-            <button class="btn-icon" id="aiAssistantBtn" title="AI Assistant">
-                <i class="fas fa-robot"></i>
-            </button>
-            <div class="user-info">
-                <span class="user-name">Kasir</span>
-                <span class="user-role">Admin</span>
-            </div>
-        </div>
+      <div class="sidebar-footer">
+        <button id="toggle-theme" class="btn-ghost" aria-pressed="false" title="Toggle dark/light mode">
+          <i class="fa-regular fa-sun"></i><i class="fa-regular fa-moon"></i>
+        </button>
+      </div>
     </aside>
 
-    <!-- ============================================================ -->
-    <!-- MAIN CONTENT                                                  -->
-    <!-- ============================================================ -->
-    <main class="main-content" id="mainContent">
-        <!-- HEADER -->
-        <header class="app-header">
-            <button class="btn-icon mobile-menu-toggle" id="mobileMenuToggle">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="header-search">
-                <i class="fas fa-search"></i>
-                <input type="text" id="globalSearch" placeholder="Cari produk, transaksi... (Ctrl+K)" />
-                <kbd>Ctrl+K</kbd>
-            </div>
-            <div class="header-actions">
-                <div class="notification-badge">
-                    <i class="fas fa-bell"></i>
-                    <span class="badge" id="notificationCount">0</span>
-                </div>
-                <div class="shift-status" id="shiftStatus">
-                    <span class="status-dot offline"></span>
-                    <span>Offline</span>
-                </div>
-                <span class="current-time" id="currentTime"></span>
-            </div>
-        </header>
-
-        <!-- SECTION: DASHBOARD -->
-        <section id="dashboard" class="page-section active">
-            <div class="section-header">
-                <h1><i class="fas fa-chart-pie"></i> Dashboard</h1>
-                <div class="section-actions">
-                    <button class="btn btn-sm btn-outline" onclick="window.refreshDashboard()">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="window.exportDashboard()">
-                        <i class="fas fa-download"></i> Export
-                    </button>
-                </div>
-            </div>
-
-            <!-- Stat Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon blue">
-                        <i class="fas fa-cash-register"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Penjualan Hari Ini</span>
-                        <span class="stat-value" id="todaySales">Rp 0</span>
-                    </div>
-                    <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i> 12.5%
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon green">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Total Transaksi</span>
-                        <span class="stat-value" id="totalTransactions">0</span>
-                    </div>
-                    <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i> 8.2%
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon orange">
-                        <i class="fas fa-boxes"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Produk Terjual</span>
-                        <span class="stat-value" id="totalProductsSold">0</span>
-                    </div>
-                    <div class="stat-change positive">
-                        <i class="fas fa-arrow-up"></i> 5.7%
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon purple">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Pelanggan Aktif</span>
-                        <span class="stat-value" id="activeCustomers">0</span>
-                    </div>
-                    <div class="stat-change negative">
-                        <i class="fas fa-arrow-down"></i> 0.3%
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts Row -->
-            <div class="charts-row">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3>Trend Penjualan</h3>
-                        <select id="salesPeriod">
-                            <option value="7">7 Hari</option>
-                            <option value="30" selected>30 Hari</option>
-                            <option value="90">3 Bulan</option>
-                        </select>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="salesChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3>Produk Terlaris</h3>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="topProductsChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Transactions -->
-            <div class="recent-transactions">
-                <div class="section-header">
-                    <h3><i class="fas fa-clock"></i> Transaksi Terbaru</h3>
-                    <a href="#transactions" class="btn btn-sm btn-outline">Lihat Semua</a>
-                </div>
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Pelanggan</th>
-                                <th>Total</th>
-                                <th>Metode</th>
-                                <th>Status</th>
-                                <th>Waktu</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recentTransactions">
-                            <!-- Dynamic content -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION: POINT OF SALE -->
-        <section id="pos" class="page-section">
-            <div class="pos-layout">
-                <!-- Left: Product Grid -->
-                <div class="pos-products">
-                    <div class="pos-toolbar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="posSearch" placeholder="Cari produk..." />
-                            <button class="btn btn-sm btn-icon" id="barcodeScanBtn" title="Scan Barcode">
-                                <i class="fas fa-camera"></i>
-                            </button>
-                        </div>
-                        <div class="pos-filters">
-                            <select id="posCategoryFilter">
-                                <option value="all">Semua Kategori</option>
-                                <option value="Makanan">Makanan</option>
-                                <option value="Minuman">Minuman</option>
-                                <option value="Snack">Snack</option>
-                                <option value="Rokok">Rokok</option>
-                                <option value="Lainnya">Lainnya</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="product-grid" id="posProductGrid">
-                        <!-- Dynamic product cards -->
-                    </div>
-                </div>
-
-                <!-- Right: Cart -->
-                <div class="pos-cart">
-                    <div class="cart-header">
-                        <h3><i class="fas fa-shopping-cart"></i> Keranjang</h3>
-                        <div class="cart-actions">
-                            <button class="btn btn-sm btn-outline" id="holdCartBtn" title="Simpan Keranjang">
-                                <i class="fas fa-pause"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" id="clearCartBtn" title="Kosongkan">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="cart-items" id="cartItems">
-                        <div class="empty-cart">
-                            <i class="fas fa-shopping-basket"></i>
-                            <p>Keranjang kosong</p>
-                            <span>Klik produk untuk menambahkan</span>
-                        </div>
-                    </div>
-
-                    <div class="cart-summary">
-                        <div class="summary-row">
-                            <span>Subtotal</span>
-                            <span id="cartSubtotal">Rp 0</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Diskon</span>
-                            <span id="cartDiscount">-Rp 0</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Pajak (11%)</span>
-                            <span id="cartTax">Rp 0</span>
-                        </div>
-                        <div class="summary-row total">
-                            <span>Total</span>
-                            <span id="cartTotal">Rp 0</span>
-                        </div>
-
-                        <div class="discount-input">
-                            <input type="text" id="discountCode" placeholder="Kode diskon..." />
-                            <button class="btn btn-sm btn-primary" id="applyDiscountBtn">Terapkan</button>
-                        </div>
-
-                        <div class="payment-actions">
-                            <button class="btn btn-success btn-lg" id="paymentBtn">
-                                <i class="fas fa-credit-card"></i> Bayar (F9)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION: PRODUCTS -->
-        <section id="products" class="page-section">
-            <div class="section-header">
-                <h1><i class="fas fa-boxes"></i> Manajemen Produk</h1>
-                <div class="section-actions">
-                    <button class="btn btn-primary" id="addProductBtn">
-                        <i class="fas fa-plus"></i> Tambah Produk
-                    </button>
-                    <button class="btn btn-outline" id="importProductsBtn">
-                        <i class="fas fa-file-import"></i> Import
-                    </button>
-                    <button class="btn btn-outline" id="exportProductsBtn">
-                        <i class="fas fa-file-export"></i> Export
-                    </button>
-                </div>
-            </div>
-
-            <div class="products-toolbar">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="productsSearch" placeholder="Cari produk..." />
-                </div>
-                <div class="products-filters">
-                    <select id="productsCategoryFilter">
-                        <option value="all">Semua Kategori</option>
-                        <option value="Makanan">Makanan</option>
-                        <option value="Minuman">Minuman</option>
-                        <option value="Snack">Snack</option>
-                        <option value="Rokok">Rokok</option>
-                        <option value="Lainnya">Lainnya</option>
-                    </select>
-                    <select id="productsStockFilter">
-                        <option value="all">Semua Stok</option>
-                        <option value="low">Stok Menipis</option>
-                        <option value="out">Habis</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Nama</th>
-                            <th>Kategori</th>
-                            <th>Harga</th>
-                            <th>Stok</th>
-                            <th>Barcode</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productsTableBody">
-                        <!-- Dynamic content -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- SECTION: TRANSACTIONS -->
-        <section id="transactions" class="page-section">
-            <div class="section-header">
-                <h1><i class="fas fa-receipt"></i> Riwayat Transaksi</h1>
-                <div class="section-actions">
-                    <button class="btn btn-outline" id="exportTransactionsBtn">
-                        <i class="fas fa-file-export"></i> Export
-                    </button>
-                    <button class="btn btn-outline" id="refreshTransactionsBtn">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div class="transactions-toolbar">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="transactionsSearch" placeholder="Cari transaksi..." />
-                </div>
-                <div class="transactions-filters">
-                    <input type="date" id="transactionsDateFrom" />
-                    <span>sampai</span>
-                    <input type="date" id="transactionsDateTo" />
-                    <select id="transactionsPaymentFilter">
-                        <option value="all">Semua Metode</option>
-                        <option value="Tunai">Tunai</option>
-                        <option value="QRIS">QRIS</option>
-                        <option value="Transfer">Transfer</option>
-                        <option value="E-Wallet">E-Wallet</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Pelanggan</th>
-                            <th>Total</th>
-                            <th>Diskon</th>
-                            <th>Metode</th>
-                            <th>Status</th>
-                            <th>Waktu</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionsTableBody">
-                        <!-- Dynamic content -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- SECTION: STOCK -->
-        <section id="stock" class="page-section">
-            <div class="section-header">
-                <h1><i class="fas fa-warehouse"></i> Manajemen Stok</h1>
-                <div class="section-actions">
-                    <button class="btn btn-primary" id="stockInBtn">
-                        <i class="fas fa-arrow-down"></i> Barang Masuk
-                    </button>
-                    <button class="btn btn-outline" id="stockOutBtn">
-                        <i class="fas fa-arrow-up"></i> Barang Keluar
-                    </button>
-                </div>
-            </div>
-
-            <div class="stock-alerts" id="stockAlerts">
-                <!-- Low stock alerts -->
-            </div>
-
-            <div class="stock-grid">
-                <div class="stock-card">
-                    <h3><i class="fas fa-exclamation-triangle text-warning"></i> Stok Menipis</h3>
-                    <div id="lowStockList">
-                        <!-- Dynamic content -->
-                    </div>
-                </div>
-                <div class="stock-card">
-                    <h3><i class="fas fa-chart-bar"></i> Statistik Stok</h3>
-                    <div class="stock-stats">
-                        <div class="stat-item">
-                            <span>Total Produk</span>
-                            <span id="stockTotalProducts">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>Total Stok</span>
-                            <span id="stockTotalItems">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span>Kategori Terbanyak</span>
-                            <span id="stockTopCategory">-</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION: CUSTOMERS -->
-        <section id="customers" class="page-section">
-            <div class="section-header">
-                <h1><i class="fas fa-users"></i> Manajemen Pelanggan</h1>
-                <div class="section-actions">
-                    <button class="btn btn-primary" id="addCustomerBtn">
-                        <i class="fas fa-user-plus"></i> Tambah Pelanggan
-                    </button>
-                </div>
-            </div>
-
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="customersSearch" placeholder="Cari pelanggan..." />
-            </div>
-
-            <div class="table-wrapper">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Nama</th>
-                            <th>Telepon</th>
-                            <th>Poin</th>
-                            <th>Bergabung</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="customersTableBody">
-                        <!-- Dynamic content -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- SECTION: SHIFTS -->
-        <section id="shifts" class="page-section">
-            <div class="section-header">
-                <h1><i class="fas fa-clock"></i> Manajemen Shift</h1>
-                <div class="section-actions">
-                    <button class="btn btn-success" id="openShiftBtn">
-                        <i class="fas fa-play"></i> Buka Shift
-                    </button>
-                    <button class="btn btn-danger" id="closeShiftBtn">
-                        <i class="fas fa-stop"></i> Tutup Shift
-                    </button>
-                </div>
-            </div>
-
-            <div class="shift-summary" id="shiftSummary">
-                <!-- Shift summary card -->
-            </div>
-
-            <div class="table-wrapper">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Kasir</th>
-                            <th>Buka</th>
-                            <th>Tutup</th>
-                            <th>Status</th>
-                            <th>Total Transaksi</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="shiftsTableBody">
-                        <!-- Dynamic content -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- SECTION: SETTINGS -->
-        <section id="settings" class="page-section">
-            <div class="section-header">
-                <h1><i class="fas fa-cog"></i> Pengaturan</h1>
-            </div>
-
-            <div class="settings-grid">
-                <div class="settings-card">
-                    <h3><i class="fas fa-palette"></i> Tema</h3>
-                    <div class="settings-group">
-                        <button class="btn btn-outline" id="themeLightBtn">☀️ Light</button>
-                        <button class="btn btn-outline" id="themeDarkBtn">🌙 Dark</button>
-                        <button class="btn btn-outline" id="themeSystemBtn">🔄 System</button>
-                    </div>
-                </div>
-
-                <div class="settings-card">
-                    <h3><i class="fas fa-database"></i> Database</h3>
-                    <div class="settings-group">
-                        <button class="btn btn-primary" id="syncDataBtn">
-                            <i class="fas fa-sync"></i> Sinkronisasi
-                        </button>
-                        <button class="btn btn-outline" id="backupDataBtn">
-                            <i class="fas fa-download"></i> Backup
-                        </button>
-                        <button class="btn btn-outline" id="restoreDataBtn">
-                            <i class="fas fa-upload"></i> Restore
-                        </button>
-                    </div>
-                    <div class="settings-status">
-                        <span>Status: <span id="dbStatus">Online</span></span>
-                        <span>Terakhir sync: <span id="lastSync">-</span></span>
-                    </div>
-                </div>
-
-                <div class="settings-card">
-                    <h3><i class="fas fa-print"></i> Printer</h3>
-                    <div class="settings-group">
-                        <button class="btn btn-outline" id="testPrintBtn">
-                            <i class="fas fa-print"></i> Test Print
-                        </button>
-                        <button class="btn btn-outline" id="configurePrinterBtn">
-                            <i class="fas fa-cog"></i> Konfigurasi
-                        </button>
-                    </div>
-                </div>
-
-                <div class="settings-card">
-                    <h3><i class="fas fa-shield-alt"></i> Keamanan</h3>
-                    <div class="settings-group">
-                        <button class="btn btn-outline" id="changePasswordBtn">
-                            <i class="fas fa-key"></i> Ganti Password
-                        </button>
-                        <button class="btn btn-outline" id="logoutBtn">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- ============================================================ -->
-    <!-- MODALS                                                       -->
-    <!-- ============================================================ -->
-
-    <!-- Modal: Add/Edit Product -->
-    <div class="modal" id="productModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="productModalTitle">Tambah Produk</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="productForm">
-                    <input type="hidden" id="productId" />
-                    <div class="form-group">
-                        <label>Nama Produk *</label>
-                        <input type="text" id="productName" required />
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Kategori *</label>
-                            <select id="productCategory" required>
-                                <option value="Makanan">Makanan</option>
-                                <option value="Minuman">Minuman</option>
-                                <option value="Snack">Snack</option>
-                                <option value="Rokok">Rokok</option>
-                                <option value="Lainnya">Lainnya</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Emoji</label>
-                            <input type="text" id="productEmoji" placeholder="🍕" maxlength="2" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Harga Jual *</label>
-                            <input type="number" id="productPrice" required min="0" step="1000" />
-                        </div>
-                        <div class="form-group">
-                            <label>Harga Modal</label>
-                            <input type="number" id="productModalPrice" min="0" step="1000" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Stok *</label>
-                            <input type="number" id="productStock" required min="0" />
-                        </div>
-                        <div class="form-group">
-                            <label>Barcode</label>
-                            <input type="text" id="productBarcode" placeholder="Auto-generate" />
-                            <button type="button" class="btn btn-sm btn-outline" id="generateBarcodeBtn">
-                                Generate
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline modal-close">Batal</button>
-                <button class="btn btn-primary" id="saveProductBtn">Simpan</button>
-            </div>
+    <!-- Main content -->
+    <div class="main-column">
+      <header class="app-header" role="banner">
+        <div class="header-left">
+          <button id="open-sidebar" class="btn-icon" aria-label="Buka sidebar"><i class="fa-solid fa-bars"></i></button>
+          <div class="search">
+            <input id="global-search" type="search" placeholder="Cari produk, transaksi, pelanggan..." aria-label="Cari" />
+          </div>
         </div>
-    </div>
 
-    <!-- Modal: Payment -->
-    <div class="modal modal-lg" id="paymentModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-credit-card"></i> Pembayaran</h2>
-                <button class="modal-close">&times;</button>
+        <div class="header-right">
+          <div class="header-actions">
+            <button id="btn-notifications" class="btn-icon" aria-label="Notifikasi"><i class="fa-solid fa-bell"></i></button>
+            <div class="profile" aria-hidden="false">
+              <button class="profile-btn" aria-haspopup="true" aria-expanded="false">
+                <i class="fa-solid fa-user"></i> <span class="profile-name">Kasir</span>
+              </button>
             </div>
-            <div class="modal-body">
-                <div class="payment-layout">
-                    <div class="payment-summary">
-                        <h3>Ringkasan</h3>
-                        <div class="payment-items" id="paymentItems">
-                            <!-- Cart items summary -->
-                        </div>
-                        <div class="payment-totals">
-                            <div class="summary-row">
-                                <span>Subtotal</span>
-                                <span id="paymentSubtotal">Rp 0</span>
-                            </div>
-                            <div class="summary-row">
-                                <span>Diskon</span>
-                                <span id="paymentDiscount">-Rp 0</span>
-                            </div>
-                            <div class="summary-row total">
-                                <span>Total</span>
-                                <span id="paymentTotal">Rp 0</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="payment-methods">
-                        <h3>Metode Pembayaran</h3>
-                        <div class="payment-method-grid">
-                            <button class="payment-method-btn" data-method="Tunai">
-                                <i class="fas fa-money-bill-wave"></i>
-                                <span>Tunai</span>
-                            </button>
-                            <button class="payment-method-btn" data-method="QRIS">
-                                <i class="fas fa-qrcode"></i>
-                                <span>QRIS</span>
-                            </button>
-                            <button class="payment-method-btn" data-method="Transfer">
-                                <i class="fas fa-university"></i>
-                                <span>Transfer</span>
-                            </button>
-                            <button class="payment-method-btn" data-method="E-Wallet">
-                                <i class="fas fa-wallet"></i>
-                                <span>E-Wallet</span>
-                            </button>
-                        </div>
-                        <div class="payment-detail" id="paymentDetail">
-                            <div class="form-group">
-                                <label>Jumlah Bayar</label>
-                                <input type="number" id="paymentAmount" placeholder="Masukkan jumlah" />
-                            </div>
-                            <div class="form-group">
-                                <label>Nama Pelanggan</label>
-                                <input type="text" id="paymentCustomer" placeholder="Opsional" />
-                            </div>
-                            <div id="qrisContainer" style="display:none;">
-                                <p>Scan QR Code berikut:</p>
-                                <div id="qrcode"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline modal-close">Batal</button>
-                <button class="btn btn-success btn-lg" id="processPaymentBtn">
-                    <i class="fas fa-check"></i> Proses Pembayaran
-                </button>
-            </div>
+          </div>
         </div>
+      </header>
+
+      <main id="main" tabindex="-1" role="main" class="content-area">
+        <!-- ROUTE: Dashboard -->
+        <section id="view-dashboard" class="view active" aria-labelledby="dashboard-heading">
+          <h2 id="dashboard-heading" class="sr-only">Dashboard</h2>
+          <div class="dashboard-grid">
+            <!-- Statistik ringkasan -->
+            <div class="card" id="summary-cards">
+              <!-- Content diisi via JS -->
+            </div>
+
+            <!-- Chart area -->
+            <div class="card" id="sales-chart">
+              <!-- Chart.js canvas akan di-render oleh charts.js -->
+              <canvas id="chart-sales" width="400" height="180" aria-label="Grafik penjualan"></canvas>
+            </div>
+
+            <!-- Top products -->
+            <div class="card" id="top-products">
+              <!-- Diisi via produk/top list -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ROUTE: Products -->
+        <section id="view-products" class="view" aria-labelledby="products-heading" hidden>
+          <h2 id="products-heading" class="sr-only">Produk</h2>
+          <div id="products-toolbar" class="toolbar">
+            <button id="btn-new-product" class="btn-primary"><i class="fa-solid fa-plus"></i> Produk Baru</button>
+            <input id="products-filter" type="search" placeholder="Filter produk..." />
+          </div>
+          <div id="products-list" class="card-list">
+            <!-- Daftar produk diisi oleh js/modules/products.js -->
+          </div>
+        </section>
+
+        <!-- ROUTE: POS -->
+        <section id="view-pos" class="view" aria-labelledby="pos-heading" hidden>
+          <h2 id="pos-heading" class="sr-only">Point of Sale</h2>
+          <div class="pos-layout">
+            <aside class="pos-left">
+              <div id="pos-products" class="card">
+                <!-- Produk grid -->
+              </div>
+            </aside>
+            <aside class="pos-right">
+              <div id="pos-cart" class="card">
+                <!-- Keranjang diisi oleh js/modules/cart.js -->
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Placeholder untuk view lainnya (transactions, customers, shifts, reports, settings) -->
+        <section id="view-transactions" class="view" hidden></section>
+        <section id="view-customers" class="view" hidden></section>
+        <section id="view-shifts" class="view" hidden></section>
+        <section id="view-reports" class="view" hidden></section>
+        <section id="view-settings" class="view" hidden></section>
+      </main>
+
+      <footer class="app-footer" role="contentinfo">
+        <small>© <span id="current-year"></span> WarungKita PRO MAX — Built with ❤️</small>
+      </footer>
     </div>
+  </div>
 
-    <!-- Modal: Receipt -->
-    <div class="modal modal-sm" id="receiptModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-receipt"></i> Struk</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="receiptContent" class="receipt">
-                    <!-- Dynamic receipt content -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" id="printReceiptBtn">
-                    <i class="fas fa-print"></i> Print
-                </button>
-                <button class="btn btn-outline modal-close">Tutup</button>
-            </div>
-        </div>
-    </div>
+  <!-- Global modals (mount point, content diisi oleh JS) -->
+  <div id="modal-root" aria-live="polite"></div>
 
-    <!-- Modal: AI Assistant -->
-    <div class="modal modal-sm" id="aiModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-robot"></i> AI Assistant</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="ai-chat" id="aiChat">
-                    <div class="ai-message ai-bot">
-                        <p>Halo! Saya asisten AI WarungKita. Ada yang bisa saya bantu?</p>
-                        <small>Contoh: "tambah produk", "lihat penjualan", "rekomendasi produk"</small>
-                    </div>
-                </div>
-                <div class="ai-input">
-                    <input type="text" id="aiInput" placeholder="Tanyakan sesuatu..." />
-                    <button class="btn btn-primary" id="aiSendBtn">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+  <!-- External libraries (di-load tanpa inline JS) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
 
-    <!-- Modal: Stock In/Out -->
-    <div class="modal" id="stockModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="stockModalTitle">Barang Masuk</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="stockForm">
-                    <input type="hidden" id="stockProductId" />
-                    <div class="form-group">
-                        <label>Produk</label>
-                        <select id="stockProductSelect" required>
-                            <!-- Dynamic options -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Jumlah *</label>
-                        <input type="number" id="stockQuantity" required min="1" />
-                    </div>
-                    <div class="form-group">
-                        <label>Keterangan</label>
-                        <textarea id="stockNote" placeholder="Catatan tambahan..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline modal-close">Batal</button>
-                <button class="btn btn-primary" id="saveStockBtn">Simpan</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Customer -->
-    <div class="modal" id="customerModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="customerModalTitle">Tambah Pelanggan</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="customerForm">
-                    <input type="hidden" id="customerId" />
-                    <div class="form-group">
-                        <label>Nama *</label>
-                        <input type="text" id="customerName" required />
-                    </div>
-                    <div class="form-group">
-                        <label>Telepon</label>
-                        <input type="tel" id="customerPhone" />
-                    </div>
-                    <div class="form-group">
-                        <label>Poin</label>
-                        <input type="number" id="customerPoints" value="0" min="0" />
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline modal-close">Batal</button>
-                <button class="btn btn-primary" id="saveCustomerBtn">Simpan</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Shift -->
-    <div class="modal" id="shiftModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="shiftModalTitle">Buka Shift</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="shiftForm">
-                    <div class="form-group">
-                        <label>Nama Kasir *</label>
-                        <input type="text" id="shiftCashierName" required />
-                    </div>
-                    <div class="form-group">
-                        <label>Saldo Awal *</label>
-                        <input type="number" id="shiftInitialCash" required min="0" step="1000" />
-                    </div>
-                    <div class="form-group">
-                        <label>Catatan</label>
-                        <textarea id="shiftNote" placeholder="Catatan shift..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline modal-close">Batal</button>
-                <button class="btn btn-primary" id="saveShiftBtn">Simpan</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div id="toastContainer"></div>
-
-    <!-- ============================================================ -->
-    <!-- JAVASCRIPT                                                   -->
-    <!-- ============================================================ -->
-
-    <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- Custom JS Modules -->
-    <script type="module" src="js/main.js"></script>
+  <!-- App scripts (ES modules) -->
+  <script type="module" src="js/config.js"></script>
+  <script type="module" src="js/state.js"></script>
+  <script type="module" src="js/api.js"></script>
+  <script type="module" src="js/utils.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
