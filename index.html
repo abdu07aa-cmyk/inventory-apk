@@ -7,10 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
-    <!-- ===== SUPABASE CDN YANG STABIL ===== -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.7/umd/supabase.min.js"></script>
-    
     <style>
         /* ===== ALL CSS ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
@@ -422,50 +418,96 @@
 
 <script>
 // ============================================================
-// 1. SUPABASE CONFIG - GANTI DENGAN PUNYA ANDA
+// 1. SUPABASE CONFIG - GANTI DENGAN KEY ASLI ANDA
 // ============================================================
 const SUPABASE_URL = 'https://marelgsluzshkwxwcjod.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTk4MjQwNzAsImV4cCI6MjAzNTQwMDA3MH0.YOUR_ACTUAL_KEY'; // GANTI DENGAN KEY ASLI
+// ⚠️ GANTI INI DENGAN ANON KEY DARI DASHBOARD SUPABASE
+const SUPABASE_KEY = 'YOUR_ACTUAL_ANON_KEY';
 
 // ============================================================
-// 2. CEK APAKAH SUPABASE TERLOAD
+// 2. SUPABASE REST API - TANPA LIBRARY
 // ============================================================
-console.log('Supabase loaded:', typeof supabaseClient);
+const supabaseAPI = {
+    // GET data
+    async get(table, select = '*') {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${select}`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching ${table}:`, error);
+            return null;
+        }
+    },
+
+    // POST data
+    async post(table, data) {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error posting to ${table}:`, error);
+            return null;
+        }
+    },
+
+    // PATCH update
+    async patch(table, id, data) {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error updating ${table}:`, error);
+            return null;
+        }
+    },
+
+    // DELETE
+    async delete(table, id) {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return true;
+        } catch (error) {
+            console.error(`Error deleting from ${table}:`, error);
+            return false;
+        }
+    }
+};
 
 // ============================================================
-// 3. BUAT SUPABASE CLIENT
-// ============================================================
-let sb = null;
-
-// Coba load dengan berbagai cara
-if (typeof supabaseClient !== 'undefined') {
-    // Cara 1: Pakai supabaseClient global
-    sb = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('Supabase client created via supabaseClient');
-} else if (typeof supabase !== 'undefined' && supabase.createClient) {
-    // Cara 2: Pakai supabase global
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('Supabase client created via supabase');
-} else {
-    console.error('Supabase library not loaded! Using localStorage fallback.');
-    // Fallback: Pakai localStorage
-    sb = {
-        from: (table) => ({
-            select: () => ({ order: () => ({ then: (cb) => cb({ data: JSON.parse(localStorage.getItem(table) || '[]'), error: null }) }) }),
-            insert: (data) => ({ then: (cb) => { 
-                const existing = JSON.parse(localStorage.getItem(table) || '[]');
-                existing.push(data);
-                localStorage.setItem(table, JSON.stringify(existing));
-                cb({ data: data, error: null });
-            }}),
-            update: (data) => ({ eq: () => ({ then: (cb) => { cb({ data: data, error: null }); } }) }),
-            delete: () => ({ eq: () => ({ then: (cb) => { cb({ data: null, error: null }); } }) })
-        })
-    };
-}
-
-// ============================================================
-// 4. GLOBAL STATE
+// 3. GLOBAL STATE
 // ============================================================
 let products = [];
 let cart = [];
@@ -475,7 +517,7 @@ let discount = 0;
 let editingProductId = null;
 
 // ============================================================
-// 5. UTILITY FUNCTIONS
+// 4. UTILITY FUNCTIONS
 // ============================================================
 function formatPrice(val) {
     return new Intl.NumberFormat('id-ID').format(Math.round(val || 0));
@@ -496,28 +538,22 @@ function getDateDisplay() {
 }
 
 // ============================================================
-// 6. PRODUCT CRUD
+// 5. PRODUCT CRUD
 // ============================================================
 async function loadProducts() {
     try {
-        if (!sb) {
+        const data = await supabaseAPI.get('products');
+        if (data) {
+            products = data;
+            renderProducts();
+            updateStats();
+            updateStockSelect();
+            showToast('Data produk dimuat!', 'success');
+        } else {
             loadLocalProducts();
-            return;
         }
-        const { data, error } = await sb
-            .from('products')
-            .select('*')
-            .order('name');
-            
-        if (error) throw error;
-        products = data || [];
-        renderProducts();
-        updateStats();
-        updateStockSelect();
-        showToast('Data produk dimuat!', 'success');
     } catch (error) {
-        console.error('Error loading products:', error);
-        showToast('Gagal memuat produk!', 'error');
+        console.error('Error:', error);
         loadLocalProducts();
     }
 }
@@ -536,8 +572,39 @@ function loadLocalProducts() {
     updateStockSelect();
 }
 
+async function saveProduct(product) {
+    const result = await supabaseAPI.post('products', product);
+    if (result) {
+        showToast('Produk berhasil ditambahkan!', 'success');
+        await loadProducts();
+    } else {
+        // Fallback ke lokal
+        const newId = Math.max(...products.map(p => p.id), 0) + 1;
+        products.push({ ...product, id: newId });
+        renderProducts();
+        updateStats();
+        updateStockSelect();
+        showToast('Produk ditambahkan (lokal)!', 'success');
+    }
+}
+
+async function deleteProduct(id) {
+    if (!confirm('Yakin ingin menghapus produk ini?')) return;
+    const success = await supabaseAPI.delete('products', id);
+    if (success) {
+        showToast('Produk dihapus!', 'success');
+        await loadProducts();
+    } else {
+        products = products.filter(p => p.id !== id);
+        renderProducts();
+        updateStats();
+        updateStockSelect();
+        showToast('Produk dihapus (lokal)!', 'success');
+    }
+}
+
 // ============================================================
-// 7. RENDER FUNCTIONS
+// 6. RENDER FUNCTIONS
 // ============================================================
 function renderProducts() {
     const grid = document.getElementById('productGrid');
@@ -626,7 +693,7 @@ function updateSummary() {
 }
 
 // ============================================================
-// 8. CART FUNCTIONS
+// 7. CART FUNCTIONS
 // ============================================================
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
@@ -674,17 +741,8 @@ function clearCart() {
     showToast('Keranjang dikosongkan', 'info');
 }
 
-function deleteProduct(id) {
-    if (!confirm('Yakin ingin menghapus produk ini?')) return;
-    products = products.filter(p => p.id !== id);
-    renderProducts();
-    updateStats();
-    updateStockSelect();
-    showToast('Produk dihapus!', 'success');
-}
-
 // ============================================================
-// 9. PAYMENT FUNCTIONS
+// 8. PAYMENT FUNCTIONS
 // ============================================================
 async function processPayment() {
     if (cart.length === 0) {
@@ -709,7 +767,7 @@ async function processPayment() {
         }
     }
     
-    completeTransaction(total);
+    await completeTransaction(total);
 }
 
 function generateQRCode(amount) {
@@ -733,21 +791,36 @@ function confirmQRISPayment() {
     showToast('Pembayaran QRIS berhasil!', 'success');
 }
 
-function completeTransaction(total) {
+async function completeTransaction(total) {
     const methodNames = { cash: 'Tunai', qris: 'QRIS', bank: 'Transfer Bank', ewallet: 'E-Wallet' };
     
+    // Simpan transaksi ke Supabase
+    const transaction = {
+        total_amount: total,
+        payment_method: methodNames[selectedPayment] || 'Tunai',
+        payment_status: 'completed',
+        customer_name: 'Pelanggan'
+    };
+    
+    const result = await supabaseAPI.post('transactions', transaction);
+    
+    // Simpan ke lokal
     transactions.push({
         date: new Date().toLocaleString('id-ID'),
         total: total,
         items: cart.map(i => `${i.name} x${i.qty}`).join(', '),
-        method: methodNames[selectedPayment] || 'Tunai'
+        method: methodNames[selectedPayment] || 'Tunai',
+        id: result?.[0]?.id || Date.now()
     });
     
     // Kurangi stok
-    cart.forEach(cartItem => {
+    for (const cartItem of cart) {
         const product = products.find(p => p.id === cartItem.id);
-        if (product) product.stock = Math.max(0, product.stock - cartItem.qty);
-    });
+        if (product) {
+            product.stock = Math.max(0, product.stock - cartItem.qty);
+            await supabaseAPI.patch('products', product.id, { stock: product.stock });
+        }
+    }
     
     // Update total sales
     const totalSales = transactions.reduce((sum, t) => sum + t.total, 0);
@@ -769,9 +842,9 @@ function completeTransaction(total) {
 }
 
 // ============================================================
-// 10. STOCK IN
+// 9. STOCK IN
 // ============================================================
-function processStockIn() {
+async function processStockIn() {
     const productId = document.getElementById('stockProductSelect').value;
     const qty = parseInt(document.getElementById('stockQty').value) || 0;
     
@@ -787,6 +860,10 @@ function processStockIn() {
     }
     
     product.stock += qty;
+    
+    // Update ke Supabase
+    await supabaseAPI.patch('products', product.id, { stock: product.stock });
+    
     renderProducts();
     updateStats();
     updateStockSelect();
@@ -797,7 +874,7 @@ function processStockIn() {
 }
 
 // ============================================================
-// 11. AI ASSISTANT
+// 10. AI ASSISTANT
 // ============================================================
 function askAI() {
     const input = document.getElementById('aiInput');
@@ -834,7 +911,7 @@ function askAI() {
 }
 
 // ============================================================
-// 12. EVENT LISTENERS
+// 11. EVENT LISTENERS
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('dateDisplay').textContent = getDateDisplay();
@@ -921,7 +998,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('productModal').style.display = 'none';
     });
     
-    document.getElementById('saveProduct').addEventListener('click', function() {
+    document.getElementById('saveProduct').addEventListener('click', async function() {
         const name = document.getElementById('productName').value.trim();
         const category = document.getElementById('productCategory').value;
         const price = parseInt(document.getElementById('productPrice').value) || 0;
@@ -933,13 +1010,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        const newId = Math.max(...products.map(p => p.id), 0) + 1;
-        products.push({ id: newId, name, category, price, stock, emoji });
-        renderProducts();
-        updateStats();
-        updateStockSelect();
+        await saveProduct({ name, category, price, stock, emoji });
         document.getElementById('productModal').style.display = 'none';
-        showToast(`✅ Produk "${name}" ditambahkan!`, 'success');
     });
     
     // History
