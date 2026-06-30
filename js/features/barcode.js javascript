@@ -1,0 +1,326 @@
+/**
+ * ================================================================
+ * WARUNGKITA PRO MAX - BARCODE SCANNER
+ * ================================================================
+ * Barcode scanner dengan auto-focus dan keyboard input.
+ * ================================================================
+ */
+
+import { state } from '../state.js';
+import { showToast, isValidBarcode } from '../utils.js';
+import { addProductToCart } from '../modules/cart.js';
+
+// ================================================================
+// BARCODE SCANNER STATE
+// ================================================================
+
+const scannerState = {
+    isScanning: false,
+    buffer: '',
+    lastScan: null,
+    timeout: null,
+    scanMode: 'auto' // auto, manual
+};
+
+// ================================================================
+// SCANNER CONTROLS
+// ================================================================
+
+/**
+ * Start barcode scanner
+ * @param {string} mode - scan mode (auto/manual)
+ */
+export function startScanner(mode = 'auto') {
+    scannerState.isScanning = true;
+    scannerState.scanMode = mode;
+    scannerState.buffer = '';
+    
+    if (mode === 'auto') {
+        // Focus input for auto scanning
+        const input = document.getElementById('posSearch');
+        if (input) {
+            input.focus();
+        }
+    }
+    
+    showToast('📷 Scanner aktif. Scan barcode atau ketik manual.', 'info');
+}
+
+/**
+ * Stop barcode scanner
+ */
+export function stopScanner() {
+    scannerState.isScanning = false;
+    scannerState.buffer = '';
+    
+    if (scannerState.timeout) {
+        clearTimeout(scannerState.timeout);
+        scannerState.timeout = null;
+    }
+    
+    showToast('Scanner dimatikan', 'info');
+}
+
+/**
+ * Toggle scanner
+ */
+export function toggleScanner() {
+    if (scannerState.isScanning) {
+        stopScanner();
+    } else {
+        startScanner();
+    }
+}
+
+// ================================================================
+// BARCODE INPUT HANDLING
+// ================================================================
+
+/**
+ * Handle barcode input
+ * @param {string} input - Input string
+ */
+export function handleBarcodeInput(input) {
+    if (!scannerState.isScanning) {
+        // Auto-start scanner if not started
+        startScanner();
+    }
+
+    // Add to buffer
+    scannerState.buffer += input;
+
+    // Reset timeout
+    if (scannerState.timeout) {
+        clearTimeout(scannerState.timeout);
+    }
+
+    // Set timeout to process barcode
+    scannerState.timeout = setTimeout(() => {
+        processBarcode(scannerState.buffer);
+        scannerState.buffer = '';
+        scannerState.timeout = null;
+    }, 100);
+}
+
+/**
+ * Process barcode
+ * @param {string} barcode - Barcode string
+ */
+function processBarcode(barcode) {
+    if (!barcode || barcode.length < 4) {
+        return;
+    }
+
+    // Validate barcode
+    if (!isValidBarcode(barcode)) {
+        showToast('Barcode tidak valid!', 'error');
+        return;
+    }
+
+    // Find product by barcode
+    const product = state.products.find(p => p.barcode === barcode);
+    
+    if (!product) {
+        showToast(`Produk dengan barcode ${barcode} tidak ditemukan`, 'error');
+        return;
+    }
+
+    // Add to cart
+    addProductToCart(product.id);
+    scannerState.lastScan = barcode;
+    
+    // Play scan sound
+    playScanSound();
+}
+
+// ================================================================
+// KEYBOARD SCANNER
+// ================================================================
+
+/**
+ * Setup keyboard barcode scanner
+ * Listens for keyboard input like a barcode scanner
+ */
+export function setupKeyboardScanner() {
+    let inputBuffer = '';
+    let lastKeyTime = 0;
+    let timeout = null;
+
+    document.addEventListener('keydown', (e) => {
+        // Ignore if modal is open
+        if (document.querySelector('.modal.active')) {
+            return;
+        }
+
+        // Ignore if input/textarea is focused
+        const target = e.target;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        // Ignore if not scanning
+        if (!scannerState.isScanning && e.key !== 'Enter') {
+            return;
+        }
+
+        // Check if it's a printable character
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            const now = Date.now();
+            
+            // Reset buffer if too much time between keystrokes (barcode scanner is fast)
+            if (now - lastKeyTime > 50) {
+                inputBuffer = '';
+            }
+            
+            inputBuffer += e.key;
+            lastKeyTime = now;
+            
+            // Clear previous timeout
+            if (timeout) {
+                clearTimeout(timeout);
+            }
+            
+            // Process after a short delay
+            timeout = setTimeout(() => {
+                if (inputBuffer.length >= 4) {
+                    processBarcode(inputBuffer);
+                }
+                inputBuffer = '';
+                timeout = null;
+            }, 100);
+        }
+    });
+}
+
+// ================================================================
+// SOUND EFFECTS
+// ================================================================
+
+/**
+ * Play barcode scan sound
+ */
+function playScanSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Beep sound
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.15;
+        
+        oscillator.start();
+        setTimeout(() => {
+            oscillator.stop();
+        }, 150);
+        
+        // Second beep (success)
+        setTimeout(() => {
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.frequency.value = 1000;
+            osc2.type = 'sine';
+            gain2.gain.value = 0.15;
+            osc2.start();
+            setTimeout(() => {
+                osc2.stop();
+            }, 100);
+        }, 100);
+        
+    } catch (e) {
+        // Silent fail
+    }
+}
+
+// ================================================================
+// QR CODE SCANNER (Web API)
+// ================================================================
+
+/**
+ * Open camera for QR code scanning
+ */
+export async function openQRScanner() {
+    try {
+        // Check if browser supports getUserMedia
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast('Browser tidak mendukung kamera', 'error');
+            return;
+        }
+
+        // Request camera access
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+
+        // Create video element
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.style.width = '100%';
+        video.style.maxHeight = '400px';
+        video.style.borderRadius = '8px';
+
+        // Create modal for scanner
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2><i class="fas fa-qrcode"></i> Scan QR Code</h2>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                <div class="modal-body" style="text-align: center;">
+                    <div id="qr-scanner-container"></div>
+                    <p style="margin-top: var(--spacing-3);" class="text-muted">Arahkan kamera ke QR Code</p>
+                    <button class="btn btn-danger" onclick="this.closest('.modal').querySelector('video').srcObject.getTracks().forEach(t => t.stop()); this.closest('.modal').remove();">
+                        <i class="fas fa-times"></i> Tutup
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add video to container
+        const container = modal.querySelector('#qr-scanner-container');
+        container.appendChild(video);
+
+        // Start scanning (placeholder - will use a library for actual QR scanning)
+        showToast('QR Scanner aktif. Arahkan ke QR Code.', 'info');
+
+        // Auto-close after 30 seconds
+        setTimeout(() => {
+            if (modal.parentNode) {
+                stream.getTracks().forEach(t => t.stop());
+                modal.remove();
+                showToast('Scanner timeout', 'info');
+            }
+        }, 30000);
+
+    } catch (error) {
+        console.error('QR Scanner failed:', error);
+        showToast('Gagal mengakses kamera: ' + error.message, 'error');
+    }
+}
+
+// ================================================================
+// EXPORT
+// ================================================================
+
+export default {
+    startScanner,
+    stopScanner,
+    toggleScanner,
+    handleBarcodeInput,
+    setupKeyboardScanner,
+    openQRScanner,
+    scannerState
+};
