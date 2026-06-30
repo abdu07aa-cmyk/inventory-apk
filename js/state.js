@@ -1,123 +1,182 @@
-const AppState = {
-    products: [],
-    cart: { items: [], customer: null, discount: null, subtotal: 0, discountAmount: 0, total: 0 },
-    transactions: [],
-    customers: [],
-    currentShift: { id: null, cashierName: '', initialCash: 0, status: 'closed', totalSales: 0, totalTransactions: 0 },
-    currentView: 'dashboard',
-    currentTheme: 'light',
-    loading: false,
-    notifications: [],
-    lowStockProducts: [],
-    heldCarts: [],
-    isOnline: navigator.onLine,
+/**
+ * js/state.js
+ * - Manajemen state terpusat untuk aplikasi (produk, cart, transaksi, users, dsb)
+ * - Menyediakan subscribe/unsubscribe dan persistence ke localStorage
+ * - Ditulis sebagai ES module; export default instance `state`
+ *
+ * Prinsip:
+ * - State immutable-ish: gunakan setState untuk perubahan terpusat
+ * - Autosave dengan debounce ke localStorage
+ * - Hooks sederhana untuk sinkronisasi UI (pub/sub)
+ */
+
+import { APP_CONFIG } from './config.js';
+
+const DEFAULT_STATE = {
+  products: [],          // {id,name,category,price,stock,emoji,barcode,modal_price}
+  cart: {
+    items: [],           // {product_id, quantity, price}
+    meta: {
+      discountCode: null,
+      customer_id: null,
+      hold: false
+    }
+  },
+  transactions: [],      // riwayat transaksi lokal (di-sync ke Supabase)
+  shifts: [],            // shift management
+  customers: [],
+  currentUser: {
+    id: null,
+    name: 'Kasir',
+    role: 'cashier'
+  },
+  settings: {
+    theme: APP_CONFIG.defaultTheme,
+    currency: APP_CONFIG.currency,
+    locale: APP_CONFIG.locale
+  },
+  lastSyncAt: null
 };
 
-function saveState(key, data) {
+/* Simple debounce helper */
+function debounce(fn, ms = 300) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+/* EventTarget-based pub/sub (browser-native) */
+class StateStore extends EventTarget {
+  constructor() {
+    super();
+    this._state = structuredClone(DEFAULT_STATE);
+    this._storageKey = APP_CONFIG.storageKey || 'warungkita:state:v1';
+    this._autosave = debounce(() => this.saveToLocal(), APP_CONFIG.autosaveInterval || 500);
+    this.loadFromLocal(); // inisialisasi dari localStorage bila ada
+  }
+
+  /* Dapatkan salinan state (read-only) */
+  getState() {
+    return structuredClone(this._state);
+  }
+
+  /* Set state secara partial (merge), lalu panggil autosave dan notifikasi */
+  setState(patch = {}) {
+    this._state = deepMerge(this._state, patch);
+    // Emit event 'state:changed' dengan salinan state
+    this.dispatchEvent(new CustomEvent('state:changed', { detail: this.getState() }));
+    this._autosave();
+  }
+
+  /* Subscribe untuk perubahan state: callback menerima newState */
+  subscribe(callback) {
+    const wrapper = (e) => callback(e.detail);
+    this.addEventListener('state:changed', wrapper);
+    // Return unsubscribe function
+    return () => this.removeEventListener('state:changed', wrapper);
+  }
+
+  /* Save to localStorage (synchronous) */
+  saveToLocal() {
     try {
-        const storageKey = CONFIG.storageKeys[key];
-        if (storageKey) localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch (error) { console.error('Error saving state:', error); }
-}
+      const payload = JSON.stringify(this._state);
+      localStorage.setItem(this._storageKey, payload);
+      // small event for persistence
+      this.dispatchEvent(new CustomEvent('state:saved', { detail: { at: new Date().toISOString() } }));
+    } catch (err) {
+      console.error('Gagal menyimpan state ke localStorage', err);
+    }
+  }
 
-function loadState(key) {
+  /* Load from localStorage (merge over default) */
+  loadFromLocal() {
     try {
-        const storageKey = CONFIG.storageKeys[key];
-        if (storageKey) {
-            const data = localStorage.getItem(storageKey);
-            return data ? JSON.parse(data) : null;
-        }
-        return null;
-    } catch (error) { console.error('Error loading state:', error); return null; }
-}
-
-function initializeState() {
-    console.log('Initializing state...');
-    const savedProducts = loadState('products');
-    if (savedProducts) AppState.products = savedProducts;
-    
-    const savedCart = loadState('cart');
-    if (savedCart) AppState.cart = savedCart;
-    
-    const savedTransactions = loadState('transactions');
-    if (savedTransactions) AppState.transactions = savedTransactions;
-    
-    const savedShift = loadState('currentShift');
-    if (savedShift) AppState.currentShift = savedShift;
-    
-    const savedTheme = loadState('theme');
-    if (savedTheme) {
-        AppState.currentTheme = savedTheme;
-        document.documentElement.setAttribute('data-theme', savedTheme);
+      const raw = localStorage.getItem(this._storageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      // Merge but do not overwrite runtime-only fields unless present
+      this._state = deepMerge(this._state, parsed);
+      this.dispatchEvent(new CustomEvent('state:loaded', { detail: this.getState() }));
+    } catch (err) {
+      console.warn('Gagal memuat state dari localStorage, menggunakan default', err);
     }
+  }
+
+  /* Clear local state (useful for logout or reset) */
+  clearLocal() {
+    try {
+      localStorage.removeItem(this._storageKey);
+      this._state = structuredClone(DEFAULT_STATE);
+      this.dispatchEvent(new CustomEvent('state:cleared', { detail: this.getState() }));
+    } catch (err) {
+      console.error('Gagal menghapus local state', err);
+    }
+  }
 }
 
-function updateCart() {
-    AppState.cart.subtotal = AppState.cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    if (AppState.cart.discount) {
-        if (AppState.cart.discount.type === 'percentage') {
-            AppState.cart.discountAmount = (AppState.cart.subtotal * AppState.cart.discount.value) / 100;
-        } else {
-            AppState.cart.discountAmount = AppState.cart.discount.value;
-        }
+/* Utility: deep merge sederhana untuk objek POJO */
+function deepMerge(target, source) {
+  if (!isObject(target) || !isObject(source)) return source;
+  const out = Array.isArray(target) ? [...target] : { ...target };
+  for (const [k, v] of Object.entries(source)) {
+    if (isObject(v)) {
+      out[k] = deepMerge(target[k] ?? (Array.isArray(v) ? [] : {}), v);
     } else {
-        AppState.cart.discountAmount = 0;
+      out[k] = v;
     }
-    
-    AppState.cart.total = AppState.cart.subtotal - AppState.cart.discountAmount;
-    saveState('cart', AppState.cart);
-    updateCartUI();
+  }
+  return out;
+}
+function isObject(val) {
+  return val && typeof val === 'object' && !Array.isArray(val);
 }
 
-function updateCartUI() {
-    const subtotalEl = document.getElementById('cartSubtotal');
-    const discountEl = document.getElementById('cartDiscount');
-    const totalEl = document.getElementById('cartTotal');
-    
-    if (subtotalEl) subtotalEl.textContent = formatCurrency(AppState.cart.subtotal);
-    if (discountEl) discountEl.textContent = `- ${formatCurrency(AppState.cart.discountAmount)}`;
-    if (totalEl) totalEl.textContent = formatCurrency(AppState.cart.total);
-    
-    const paymentBtn = document.getElementById('processPaymentBtn');
-    if (paymentBtn) paymentBtn.disabled = AppState.cart.items.length === 0;
+/* Export singleton instance */
+const state = new StateStore();
+export default state;
+
+/* --- Helper API functions untuk operasi state umum ---
+   Fungsi-fungsi kecil berguna untuk modules lain (products, cart, shifts)
+   Tidak memodifikasi state langsung — gunakan state.setState */
+export function findProductById(id) {
+  return state.getState().products.find(p => String(p.id) === String(id)) || null;
 }
 
-function clearCart() {
-    AppState.cart = { items: [], customer: null, discount: null, subtotal: 0, discountAmount: 0, total: 0 };
-    saveState('cart', AppState.cart);
-    updateCartUI();
-    renderCart();
+export function addProduct(product) {
+  const s = state.getState();
+  const products = Array.isArray(s.products) ? [...s.products] : [];
+  products.push(product);
+  state.setState({ products });
 }
 
-function addToCart(product, quantity = 1) {
-    const existingItem = AppState.cart.items.find(item => item.id === product.id);
-    if (existingItem) {
-        existingItem.quantity += quantity;
-    } else {
-        AppState.cart.items.push({ id: product.id, name: product.name, price: product.price, emoji: product.emoji, quantity });
-    }
-    playSound('addToCart');
-    updateCart();
-    renderCart();
+export function updateProduct(id, patch) {
+  const s = state.getState();
+  const products = s.products.map(p => (String(p.id) === String(id) ? { ...p, ...patch } : p));
+  state.setState({ products });
 }
 
-function removeFromCart(productId) {
-    AppState.cart.items = AppState.cart.items.filter(item => item.id !== productId);
-    playSound('removeFromCart');
-    updateCart();
-    renderCart();
+export function addToCart(item) {
+  // item: { product_id, quantity, price }
+  const s = state.getState();
+  const items = [...s.cart.items];
+  const idx = items.findIndex(it => String(it.product_id) === String(item.product_id));
+  if (idx >= 0) {
+    items[idx].quantity += item.quantity;
+  } else {
+    items.push({ ...item });
+  }
+  state.setState({ cart: { ...s.cart, items } });
 }
 
-function applyDiscount(code) {
-    const discountConfig = CONFIG.defaults.discountCodes[code.toUpperCase()];
-    if (discountConfig) {
-        AppState.cart.discount = { code: code.toUpperCase(), type: discountConfig.type, value: discountConfig.value, description: discountConfig.description };
-        updateCart();
-        showToast(`✅ Diskon ${discountConfig.description} diterapkan!`, 'success');
-        return true;
-    } else {
-        showToast('❌ Kode diskon tidak valid', 'error');
-        return false;
-    }
+export function removeFromCart(product_id) {
+  const s = state.getState();
+  const items = s.cart.items.filter(it => String(it.product_id) !== String(product_id));
+  state.setState({ cart: { ...s.cart, items } });
+}
+
+export function clearCart() {
+  const s = state.getState();
+  state.setState({ cart: { items: [], meta: { discountCode: null, customer_id: null, hold: false } } });
 }
