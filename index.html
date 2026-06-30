@@ -3077,10 +3077,9 @@ function askAI() {
         msg.textContent = found.length ?
             `🔍 ${found.map(p => `${p.name} (Rp ${formatPrice(p.price)}, stok ${p.stock})`).join('; ')}` :
             `❌ Tidak ada produk "${keyword}"`;
-    } else if (q.includes('diskon') || q.includes('promo')) {
-        msg.textContent = '🎁 Kode diskon tersedia: W
-                } else if (q.includes('diskon') || q.includes('promo')) {
+            } else if (q.includes('diskon') || q.includes('promo')) {
         msg.textContent = '🎁 Kode diskon tersedia: WELCOME10 (10%), HEMAT20 (20%), PROMO50 (50%).';
+
     } else if (q.includes('riwayat') || q.includes('history')) {
         msg.textContent = `📜 Total ${transactions.length} transaksi telah dilakukan hari ini.`;
     } else {
