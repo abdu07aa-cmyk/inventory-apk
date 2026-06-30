@@ -1,535 +1,226 @@
 /**
- * ================================================================
- * WARUNGKITA PRO MAX - SUPABASE API WRAPPER
- * ================================================================
- * Wrapper untuk interaksi dengan Supabase REST API.
- * Mendukung CRUD operations dengan fallback ke localStorage.
- * ================================================================
+ * js/api.js
+ * - Wrapper ringan untuk Supabase REST API (fetch-based)
+ * - Menyediakan fungsi CRUD untuk tabel utama + mekanisme fallback / retry sederhana
+ * - Semua fungsi menggunakan header dari config.APP_CONFIG.supabaseHeaders()
+ *
+ * Catatan keamanan:
+ * - SUPABASE_KEY tidak boleh di-commit ke VCS. Jika tidak diisi, fungsi akan mencoba fallback ke local state.
+ * - Fungsi ini tidak melakukan paging otomatis. Untuk daftar besar, tambahkan query params yg sesuai.
  */
 
-import { SUPABASE_CONFIG, getApiEndpoint, getApiHeaders } from './config.js';
-import { loadFromStorage, saveToStorage, generateId } from './utils.js';
-import { state } from './state.js';
+import { ENDPOINTS, APP_CONFIG, SUPABASE_KEY, TABLES } from './config.js';
+import state from './state.js';
 
-// ================================================================
-// API CLIENT
-// ================================================================
-
-class ApiClient {
-    constructor() {
-        this.url = SUPABASE_CONFIG.url;
-        this.key = SUPABASE_CONFIG.key;
-        this.tables = SUPABASE_CONFIG.tables;
-        this.isConnected = false;
-        this.retryCount = 0;
-        this.maxRetries = 3;
-    }
-
-    /**
-     * Set API key
-     * @param {string} key - Supabase API key
-     */
-    setApiKey(key) {
-        this.key = key;
-        this.isConnected = !!key;
-    }
-
-    /**
-     * Check connection status
-     * @returns {Promise<boolean>} Status koneksi
-     */
-    async checkConnection() {
-        try {
-            const response = await fetch(`${this.url}/rest/v1/`, {
-                headers: this.getHeaders(),
-                method: 'HEAD'
-            });
-            this.isConnected = response.ok;
-            return this.isConnected;
-        } catch (error) {
-            this.isConnected = false;
-            return false;
-        }
-    }
-
-    /**
-     * Get headers for API request
-     * @returns {Object} Headers
-     */
-    getHeaders() {
-        return getApiHeaders(this.key);
-    }
-
-    /**
-     * Handle API response
-     * @param {Response} response - Fetch response
-     * @returns {Promise<any>} Parsed response
-     */
-    async handleResponse(response) {
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        // Check if response has content
-        const contentLength = response.headers.get('content-length');
-        if (contentLength === '0') {
-            return null;
-        }
-
-        return response.json();
-    }
-
-    /**
-     * Execute API request with retry
-     * @param {string} method - HTTP method
-     * @param {string} endpoint - API endpoint
-     * @param {Object} options - Request options
-     * @returns {Promise<any>} Response data
-     */
-    async request(method, endpoint, options = {}) {
-        if (!this.key) {
-            throw new Error('API key tidak tersedia. Silakan konfigurasi Supabase.');
-        }
-
-        const url = endpoint.startsWith('http') ? endpoint : `${this.url}${endpoint}`;
-        const headers = this.getHeaders();
-
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    ...headers,
-                    ...options.headers
-                },
-                body: options.body ? JSON.stringify(options.body) : undefined,
-                ...options
-            });
-
-            return this.handleResponse(response);
-        } catch (error) {
-            console.error('API request failed:', error);
-
-            // Retry logic
-            if (this.retryCount < this.maxRetries) {
-                this.retryCount++;
-                console.log(`Retrying... (${this.retryCount}/${this.maxRetries})`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * this.retryCount));
-                return this.request(method, endpoint, options);
-            }
-
-            this.retryCount = 0;
-            throw error;
-        }
-    }
-
-    // ================================================================
-    // GENERIC CRUD OPERATIONS
-    // ================================================================
-
-    /**
-     * Get all records from table
-     * @param {string} table - Table name
-     * @param {Object} filters - Query filters
-     * @param {string} orderBy - Sort column
-     * @param {string} order - asc/desc
-     * @param {number} limit - Limit results
-     * @returns {Promise<Array>} Records
-     */
-    async getAll(table, filters = {}, orderBy = 'created_at', order = 'desc', limit = null) {
-        const endpoint = getApiEndpoint(table);
-        const params = new URLSearchParams();
-
-        // Add filters
-        Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-                params.append(key, `eq.${value}`);
-            }
-        });
-
-        // Add order
-        params.append('order', `${orderBy}.${order}`);
-
-        // Add limit
-        if (limit) {
-            params.append('limit', limit);
-        }
-
-        const url = `${endpoint}?${params.toString()}`;
-        return this.request('GET', url);
-    }
-
-    /**
-     * Get single record by ID
-     * @param {string} table - Table name
-     * @param {string|number} id - Record ID
-     * @returns {Promise<Object>} Record
-     */
-    async getById(table, id) {
-        const endpoint = getApiEndpoint(table);
-        const url = `${endpoint}?id=eq.${id}`;
-        const result = await this.request('GET', url);
-        return result?.[0] || null;
-    }
-
-    /**
-     * Create new record
-     * @param {string} table - Table name
-     * @param {Object} data - Record data
-     * @returns {Promise<Object>} Created record
-     */
-    async create(table, data) {
-        const endpoint = getApiEndpoint(table);
-        const result = await this.request('POST', endpoint, {
-            body: data,
-            headers: {
-                'Prefer': 'return=representation'
-            }
-        });
-        return result?.[0] || null;
-    }
-
-    /**
-     * Update record by ID
-     * @param {string} table - Table name
-     * @param {string|number} id - Record ID
-     * @param {Object} data - Update data
-     * @returns {Promise<Object>} Updated record
-     */
-    async update(table, id, data) {
-        const endpoint = getApiEndpoint(table);
-        const url = `${endpoint}?id=eq.${id}`;
-        const result = await this.request('PATCH', url, {
-            body: data,
-            headers: {
-                'Prefer': 'return=representation'
-            }
-        });
-        return result?.[0] || null;
-    }
-
-    /**
-     * Delete record by ID
-     * @param {string} table - Table name
-     * @param {string|number} id - Record ID
-     * @returns {Promise<boolean>} Success
-     */
-    async delete(table, id) {
-        const endpoint = getApiEndpoint(table);
-        const url = `${endpoint}?id=eq.${id}`;
-        await this.request('DELETE', url);
-        return true;
-    }
-
-    /**
-     * Upsert record (insert or update)
-     * @param {string} table - Table name
-     * @param {Object} data - Record data
-     * @param {string} conflictColumn - Column for conflict resolution
-     * @returns {Promise<Object>} Upserted record
-     */
-    async upsert(table, data, conflictColumn = 'id') {
-        const endpoint = getApiEndpoint(table);
-        const result = await this.request('POST', endpoint, {
-            body: data,
-            headers: {
-                'Prefer': `return=representation,resolution=merge-duplicates,on_conflict=${conflictColumn}`
-            }
-        });
-        return result?.[0] || null;
-    }
-
-    // ================================================================
-    // SPECIFIC TABLE OPERATIONS
-    // ================================================================
-
-    /**
-     * Get all products
-     * @returns {Promise<Array>} Products
-     */
-    async getProducts() {
-        return this.getAll('products', {}, 'name', 'asc');
-    }
-
-    /**
-     * Get product by ID
-     * @param {string} id - Product ID
-     * @returns {Promise<Object>} Product
-     */
-    async getProduct(id) {
-        return this.getById('products', id);
-    }
-
-    /**
-     * Create product
-     * @param {Object} data - Product data
-     * @returns {Promise<Object>} Created product
-     */
-    async createProduct(data) {
-        return this.create('products', {
-            ...data,
-            created_at: new Date().toISOString()
-        });
-    }
-
-    /**
-     * Update product
-     * @param {string} id - Product ID
-     * @param {Object} data - Update data
-     * @returns {Promise<Object>} Updated product
-     */
-    async updateProduct(id, data) {
-        return this.update('products', id, {
-            ...data,
-            updated_at: new Date().toISOString()
-        });
-    }
-
-    /**
-     * Delete product
-     * @param {string} id - Product ID
-     * @returns {Promise<boolean>} Success
-     */
-    async deleteProduct(id) {
-        return this.delete('products', id);
-    }
-
-    /**
-     * Update product stock
-     * @param {string} id - Product ID
-     * @param {number} quantity - New quantity
-     * @returns {Promise<Object>} Updated product
-     */
-    async updateStock(id, quantity) {
-        return this.update('products', id, {
-            stock: quantity,
-            last_stock_update: new Date().toISOString()
-        });
-    }
-
-    // ================================================================
-    // TRANSACTIONS
-    // ================================================================
-
-    /**
-     * Get all transactions
-     * @param {Object} filters - Filters
-     * @returns {Promise<Array>} Transactions
-     */
-    async getTransactions(filters = {}) {
-        return this.getAll('transactions', filters, 'created_at', 'desc');
-    }
-
-    /**
-     * Get transaction by ID
-     * @param {string} id - Transaction ID
-     * @returns {Promise<Object>} Transaction
-     */
-    async getTransaction(id) {
-        return this.getById('transactions', id);
-    }
-
-    /**
-     * Create transaction with items
-     * @param {Object} transaction - Transaction data
-     * @param {Array} items - Transaction items
-     * @returns {Promise<Object>} Created transaction
-     */
-    async createTransaction(transaction, items) {
-        const result = await this.create('transactions', {
-            ...transaction,
-            created_at: new Date().toISOString()
-        });
-
-        if (result && items && items.length > 0) {
-            const itemsWithTransaction = items.map(item => ({
-                ...item,
-                transaction_id: result.id
-            }));
-            await this.createTransactionItems(itemsWithTransaction);
-        }
-
-        return result;
-    }
-
-    /**
-     * Create transaction items
-     * @param {Array} items - Transaction items
-     * @returns {Promise<Array>} Created items
-     */
-    async createTransactionItems(items) {
-        const endpoint = getApiEndpoint('transaction_items');
-        const result = await this.request('POST', endpoint, {
-            body: items,
-            headers: {
-                'Prefer': 'return=representation'
-            }
-        });
-        return result || [];
-    }
-
-    // ================================================================
-    // CUSTOMERS
-    // ================================================================
-
-    /**
-     * Get all customers
-     * @param {Object} filters - Filters
-     * @returns {Promise<Array>} Customers
-     */
-    async getCustomers(filters = {}) {
-        return this.getAll('customers', filters, 'created_at', 'desc');
-    }
-
-    /**
-     * Create customer
-     * @param {Object} data - Customer data
-     * @returns {Promise<Object>} Created customer
-     */
-    async createCustomer(data) {
-        return this.create('customers', {
-            ...data,
-            created_at: new Date().toISOString()
-        });
-    }
-
-    /**
-     * Update customer points
-     * @param {string} id - Customer ID
-     * @param {number} points - New points
-     * @returns {Promise<Object>} Updated customer
-     */
-    async updateCustomerPoints(id, points) {
-        return this.update('customers', id, {
-            points,
-            updated_at: new Date().toISOString()
-        });
-    }
-
-    // ================================================================
-    // SHIFTS
-    // ================================================================
-
-    /**
-     * Get all shifts
-     * @param {Object} filters - Filters
-     * @returns {Promise<Array>} Shifts
-     */
-    async getShifts(filters = {}) {
-        return this.getAll('shifts', filters, 'opened_at', 'desc');
-    }
-
-    /**
-     * Create shift
-     * @param {Object} data - Shift data
-     * @returns {Promise<Object>} Created shift
-     */
-    async createShift(data) {
-        return this.create('shifts', {
-            ...data,
-            opened_at: new Date().toISOString()
-        });
-    }
-
-    /**
-     * Close shift
-     * @param {string} id - Shift ID
-     * @param {number} finalCash - Final cash
-     * @returns {Promise<Object>} Updated shift
-     */
-    async closeShift(id, finalCash) {
-        return this.update('shifts', id, {
-            status: 'closed',
-            closed_at: new Date().toISOString(),
-            final_cash: finalCash
-        });
-    }
-
-    // ================================================================
-    // SYNC & OFFLINE
-    // ================================================================
-
-    /**
-     * Sync local data with Supabase
-     * @param {string} table - Table name
-     * @param {Array} localData - Local data
-     * @param {string} idField - ID field name
-     * @returns {Promise<Object>} Sync result
-     */
-    async syncTable(table, localData, idField = 'id') {
-        try {
-            // Get remote data
-            const remoteData = await this.getAll(table);
-
-            // Create map for remote data
-            const remoteMap = {};
-            remoteData.forEach(item => {
-                remoteMap[item[idField]] = item;
-            });
-
-            // Create map for local data
-            const localMap = {};
-            const newItems = [];
-            const updateItems = [];
-
-            localData.forEach(item => {
-                if (item[idField] && remoteMap[item[idField]]) {
-                    // Check if update needed
-                    const remote = remoteMap[item[idField]];
-                    if (JSON.stringify(item) !== JSON.stringify(remote)) {
-                        updateItems.push(item);
-                    }
-                } else if (item[idField]) {
-                    // Existing local but not in remote
-                    newItems.push(item);
-                }
-            });
-
-            // Upsert new/updated items
-            const results = [];
-            for (const item of [...newItems, ...updateItems]) {
-                const result = await this.upsert(table, item, idField);
-                results.push(result);
-            }
-
-            return {
-                success: true,
-                inserted: newItems.length,
-                updated: updateItems.length,
-                results
-            };
-        } catch (error) {
-            console.error('Sync failed:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-
-    /**
-     * Sync all tables
-     * @returns {Promise<Object>} Sync results
-     */
-    async syncAll() {
-        const results = {};
-        const tables = ['products', 'transactions', 'customers', 'shifts'];
-
-        for (const table of tables) {
-            const localData = loadFromStorage(`warungkita-${table}`, []);
-            if (localData.length > 0) {
-                results[table] = await this.syncTable(table, localData);
-            }
-        }
-
-        return results;
-    }
+/* Helper: build query string untuk Supabase REST (simple) */
+/* Contoh penggunaan: buildQs({ select: '*', id: 'eq.1', order: 'created_at.desc' }) */
+function buildQs(params = {}) {
+  const parts = [];
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null) continue;
+    parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  }
+  return parts.length ? `?${parts.join('&')}` : '';
 }
 
-// ================================================================
-// EXPORT
-// ================================================================
+/* Low-level fetch dengan headers Supabase dan error handling dasar */
+async function supabaseFetch(url, opts = {}) {
+  const headers = {
+    ...opts.headers,
+    ...APP_CONFIG.supabaseHeaders(SUPABASE_KEY)
+  };
 
-export const api = new ApiClient();
+  const cfg = {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    signal: opts.signal
+  };
 
-export default api;
+  try {
+    const res = await fetch(url, cfg);
+    // Supabase returns 204 for no content on delete etc.
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status} - ${text}`);
+    }
+    // Try parse JSON if content exists
+    if (res.status === 204) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return await res.json();
+    } else {
+      return await res.text();
+    }
+  } catch (err) {
+    // Bubble up error to caller for fallback handling
+    throw err;
+  }
+}
+
+/* Public API functions */
+
+/* Generic CRUD helpers */
+export async function list(tableName, params = {}) {
+  // Jika tidak ada API key, fallback ke local state
+  if (!SUPABASE_KEY) {
+    const s = state.getState();
+    return s[mapTableToStateKey(tableName)] ?? [];
+  }
+  const endpoint = ENDPOINTS[tableName] || `${ENDPOINTS[tableName]}`;
+  const qs = buildQs(params);
+  const url = `${endpoint}${qs}`;
+  return supabaseFetch(url, { method: 'GET' });
+}
+
+export async function getById(tableName, id) {
+  if (!SUPABASE_KEY) {
+    const s = state.getState();
+    const arr = s[mapTableToStateKey(tableName)] ?? [];
+    return arr.find(item => String(item.id) === String(id)) || null;
+  }
+  const endpoint = ENDPOINTS[tableName];
+  // Supabase REST: filter by id using id=eq.<id> or use primary key endpoint (if configured)
+  const qs = buildQs({ id: `eq.${id}` , select: '*' });
+  const url = `${endpoint}${qs}`;
+  const res = await supabaseFetch(url, { method: 'GET' });
+  return Array.isArray(res) ? res[0] ?? null : res;
+}
+
+export async function create(tableName, payload) {
+  if (!SUPABASE_KEY) {
+    // Simpan lokal dan tandai untuk sync
+    const s = state.getState();
+    const key = mapTableToStateKey(tableName);
+    const arr = Array.isArray(s[key]) ? [...s[key]] : [];
+    // buat id sementara jika belum ada
+    const id = payload.id ?? `local-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    const item = { ...payload, id, _local: true, _created_at: new Date().toISOString() };
+    arr.push(item);
+    state.setState({ [key]: arr });
+    // jika tabel transaksi, tambahkan ke transaksi lokal pending sync
+    if (tableName === TABLES.TRANSACTIONS) {
+      const txs = state.getState().transactions || [];
+      txs.push({ ...item, pending: true });
+      state.setState({ transactions: txs });
+    }
+    return item;
+  }
+  const endpoint = ENDPOINTS[tableName];
+  const url = `${endpoint}`;
+  // Supabase: POST untuk insert (returning all rows can be controlled with Prefer header)
+  const res = await supabaseFetch(url, {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: payload
+  });
+  return res;
+}
+
+export async function update(tableName, id, patch) {
+  if (!SUPABASE_KEY) {
+    const s = state.getState();
+    const key = mapTableToStateKey(tableName);
+    const arr = (s[key] || []).map(item => (String(item.id) === String(id) ? { ...item, ...patch } : item));
+    state.setState({ [key]: arr });
+    return arr.find(i => String(i.id) === String(id)) || null;
+  }
+  const endpoint = ENDPOINTS[tableName];
+  // Supabase REST: PATCH with id=eq.<id>
+  const qs = buildQs({ id: `eq.${id}` });
+  const url = `${endpoint}${qs}`;
+  const res = await supabaseFetch(url, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: patch
+  });
+  return res;
+}
+
+export async function remove(tableName, id) {
+  if (!SUPABASE_KEY) {
+    const s = state.getState();
+    const key = mapTableToStateKey(tableName);
+    const arr = (s[key] || []).filter(item => String(item.id) !== String(id));
+    state.setState({ [key]: arr });
+    return true;
+  }
+  const endpoint = ENDPOINTS[tableName];
+  const qs = buildQs({ id: `eq.${id}` });
+  const url = `${endpoint}${qs}`;
+  await supabaseFetch(url, { method: 'DELETE' });
+  return true;
+}
+
+/* Map nama tabel Supabase -> key di local state */
+function mapTableToStateKey(tableName) {
+  switch (tableName) {
+    case TABLES.PRODUCTS: return 'products';
+    case TABLES.TRANSACTIONS: return 'transactions';
+    case TABLES.TRANSACTION_ITEMS: return 'transaction_items';
+    case TABLES.SHIFTS: return 'shifts';
+    case TABLES.CUSTOMERS: return 'customers';
+    default: return tableName;
+  }
+}
+
+/* Synchronization helpers (very simple):
+   - syncPendingTransactions: kirim transaksi lokal yang pending (pending=true atau _local flag)
+   - Fungsi ini dipanggil periodik atau saat koneksi kembali.
+*/
+export async function syncPendingTransactions() {
+  if (!SUPABASE_KEY) {
+    // Tidak ada server, nothing to sync
+    return { ok: false, message: 'No SUPABASE_KEY configured' };
+  }
+  const s = state.getState();
+  const pending = (s.transactions || []).filter(t => t.pending || t._local);
+  const results = [];
+  for (const tx of pending) {
+    try {
+      // kirim transaksi (as object). Supabase side should accept nested transaction_items separately;
+      // disarankan: insert transaction -> get id -> insert transaction_items with transaction_id
+      const txPayload = { ...tx };
+      // remove local-only markers
+      delete txPayload.pending;
+      delete txPayload._local;
+      // Create transaction
+      const created = await create(TABLES.TRANSACTIONS, txPayload);
+      // Jika ada transaction_items, kirim juga (as separate rows)
+      if (tx.transaction_items && Array.isArray(tx.transaction_items)) {
+        for (const item of tx.transaction_items) {
+          const itemPayload = { ...item, transaction_id: created.id || created[0]?.id || null };
+          await create(TABLES.TRANSACTION_ITEMS, itemPayload);
+        }
+      }
+      // tandai local record sebagai synced (hapus pending)
+      // replace local transaction with created result
+      const newTxs = (state.getState().transactions || []).map(t => {
+        if (String(t.id) === String(tx.id)) {
+          return { ...(Array.isArray(created) ? created[0] : created) };
+        }
+        return t;
+      });
+      state.setState({ transactions: newTxs });
+      results.push({ txId: tx.id, status: 'synced' });
+    } catch (err) {
+      console.warn('Gagal sync transaksi', tx.id, err);
+      results.push({ txId: tx.id, status: 'failed', error: String(err) });
+    }
+  }
+  state.setState({ lastSyncAt: new Date().toISOString() });
+  return results;
+}
+
+/* Export low-level fetch for advanced use */
+export { supabaseFetch };
+
+/* Default export: convenience grouped API */
+export default {
+  list,
+  getById,
+  create,
+  update,
+  remove,
+  syncPendingTransactions
+};
