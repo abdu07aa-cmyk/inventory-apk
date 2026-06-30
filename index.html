@@ -418,17 +418,18 @@
 
 <script>
 // ============================================================
-// 1. SUPABASE CONFIG - GANTI DENGAN KEY ASLI ANDA
+// 1. SUPABASE CONFIG - ⚠️ GANTI DENGAN ANON KEY ASLI ANDA
 // ============================================================
 const SUPABASE_URL = 'https://marelgsluzshkwxwcjod.supabase.co';
-// ⚠️ GANTI INI DENGAN ANON KEY DARI DASHBOARD SUPABASE
-const SUPABASE_KEY = 'YOUR_ACTUAL_ANON_KEY';
+
+// 🔑 COPY ANON KEY DARI DASHBOARD: Settings → API → anon public
+// ⚠️ JANGAN BIARKAN SEPERTI INI - GANTI DENGAN KEY ASLI!
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTk4MjQwNzAsImV4cCI6MjAzNTQwMDA3MH0.YOUR_ACTUAL_KEY';
 
 // ============================================================
 // 2. SUPABASE REST API - TANPA LIBRARY
 // ============================================================
 const supabaseAPI = {
-    // GET data
     async get(table, select = '*') {
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${select}`, {
@@ -445,7 +446,6 @@ const supabaseAPI = {
         }
     },
 
-    // POST data
     async post(table, data) {
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
@@ -466,7 +466,6 @@ const supabaseAPI = {
         }
     },
 
-    // PATCH update
     async patch(table, id, data) {
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
@@ -487,7 +486,6 @@ const supabaseAPI = {
         }
     },
 
-    // DELETE
     async delete(table, id) {
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
@@ -507,18 +505,14 @@ const supabaseAPI = {
 };
 
 // ============================================================
-// 3. GLOBAL STATE
+// 3. GLOBAL STATE & FUNCTIONS (sama seperti sebelumnya)
 // ============================================================
 let products = [];
 let cart = [];
 let transactions = [];
 let selectedPayment = 'cash';
 let discount = 0;
-let editingProductId = null;
 
-// ============================================================
-// 4. UTILITY FUNCTIONS
-// ============================================================
 function formatPrice(val) {
     return new Intl.NumberFormat('id-ID').format(Math.round(val || 0));
 }
@@ -538,17 +532,17 @@ function getDateDisplay() {
 }
 
 // ============================================================
-// 5. PRODUCT CRUD
+// 4. LOAD PRODUCTS
 // ============================================================
 async function loadProducts() {
     try {
         const data = await supabaseAPI.get('products');
-        if (data) {
+        if (data && data.length > 0) {
             products = data;
             renderProducts();
             updateStats();
             updateStockSelect();
-            showToast('Data produk dimuat!', 'success');
+            showToast('✅ Data produk dimuat dari Supabase!', 'success');
         } else {
             loadLocalProducts();
         }
@@ -570,41 +564,11 @@ function loadLocalProducts() {
     renderProducts();
     updateStats();
     updateStockSelect();
-}
-
-async function saveProduct(product) {
-    const result = await supabaseAPI.post('products', product);
-    if (result) {
-        showToast('Produk berhasil ditambahkan!', 'success');
-        await loadProducts();
-    } else {
-        // Fallback ke lokal
-        const newId = Math.max(...products.map(p => p.id), 0) + 1;
-        products.push({ ...product, id: newId });
-        renderProducts();
-        updateStats();
-        updateStockSelect();
-        showToast('Produk ditambahkan (lokal)!', 'success');
-    }
-}
-
-async function deleteProduct(id) {
-    if (!confirm('Yakin ingin menghapus produk ini?')) return;
-    const success = await supabaseAPI.delete('products', id);
-    if (success) {
-        showToast('Produk dihapus!', 'success');
-        await loadProducts();
-    } else {
-        products = products.filter(p => p.id !== id);
-        renderProducts();
-        updateStats();
-        updateStockSelect();
-        showToast('Produk dihapus (lokal)!', 'success');
-    }
+    showToast('📦 Menggunakan data lokal (fallback)', 'info');
 }
 
 // ============================================================
-// 6. RENDER FUNCTIONS
+// 5. RENDER FUNCTIONS
 // ============================================================
 function renderProducts() {
     const grid = document.getElementById('productGrid');
@@ -693,7 +657,7 @@ function updateSummary() {
 }
 
 // ============================================================
-// 7. CART FUNCTIONS
+// 6. CART FUNCTIONS
 // ============================================================
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
@@ -739,6 +703,24 @@ function clearCart() {
     cart = [];
     renderCart();
     showToast('Keranjang dikosongkan', 'info');
+}
+
+// ============================================================
+// 7. DELETE PRODUCT
+// ============================================================
+async function deleteProduct(id) {
+    if (!confirm('Yakin ingin menghapus produk ini?')) return;
+    const success = await supabaseAPI.delete('products', id);
+    if (success) {
+        showToast('Produk dihapus!', 'success');
+        await loadProducts();
+    } else {
+        products = products.filter(p => p.id !== id);
+        renderProducts();
+        updateStats();
+        updateStockSelect();
+        showToast('Produk dihapus (lokal)!', 'success');
+    }
 }
 
 // ============================================================
@@ -794,7 +776,6 @@ function confirmQRISPayment() {
 async function completeTransaction(total) {
     const methodNames = { cash: 'Tunai', qris: 'QRIS', bank: 'Transfer Bank', ewallet: 'E-Wallet' };
     
-    // Simpan transaksi ke Supabase
     const transaction = {
         total_amount: total,
         payment_method: methodNames[selectedPayment] || 'Tunai',
@@ -804,7 +785,6 @@ async function completeTransaction(total) {
     
     const result = await supabaseAPI.post('transactions', transaction);
     
-    // Simpan ke lokal
     transactions.push({
         date: new Date().toLocaleString('id-ID'),
         total: total,
@@ -813,7 +793,6 @@ async function completeTransaction(total) {
         id: result?.[0]?.id || Date.now()
     });
     
-    // Kurangi stok
     for (const cartItem of cart) {
         const product = products.find(p => p.id === cartItem.id);
         if (product) {
@@ -822,7 +801,6 @@ async function completeTransaction(total) {
         }
     }
     
-    // Update total sales
     const totalSales = transactions.reduce((sum, t) => sum + t.total, 0);
     document.getElementById('totalSales').textContent = `Rp ${formatPrice(totalSales)}`;
     document.getElementById('todayTransactions').textContent = transactions.length;
@@ -860,8 +838,6 @@ async function processStockIn() {
     }
     
     product.stock += qty;
-    
-    // Update ke Supabase
     await supabaseAPI.patch('products', product.id, { stock: product.stock });
     
     renderProducts();
@@ -915,10 +891,8 @@ function askAI() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('dateDisplay').textContent = getDateDisplay();
-    
     loadProducts();
     
-    // Category tabs
     document.querySelectorAll('.cat-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
@@ -927,10 +901,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Search
     document.getElementById('searchInput').addEventListener('input', renderProducts);
     
-    // Sort
     document.getElementById('sortName').addEventListener('click', () => {
         products.sort((a, b) => a.name.localeCompare(b.name));
         renderProducts();
@@ -944,13 +916,9 @@ document.addEventListener('DOMContentLoaded', function() {
         renderProducts();
     });
     
-    // Stock In
     document.getElementById('processStockIn').addEventListener('click', processStockIn);
-    
-    // Cart
     document.getElementById('clearCart').addEventListener('click', clearCart);
     
-    // Payment methods
     document.querySelectorAll('.payment-method').forEach(method => {
         method.addEventListener('click', function() {
             document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('active'));
@@ -970,21 +938,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Payment amount
     document.getElementById('paymentAmount').addEventListener('input', updateSummary);
-    
-    // Process payment
     document.getElementById('processPayment').addEventListener('click', processPayment);
     
-    // QRIS
     document.getElementById('closeQrisModal').addEventListener('click', () => {
         document.getElementById('qrisModal').style.display = 'none';
     });
     document.getElementById('confirmQrisPayment').addEventListener('click', confirmQRISPayment);
     
-    // Product Modal
     document.getElementById('addProductBtn').addEventListener('click', () => {
-        editingProductId = null;
         document.getElementById('productModalTitle').textContent = '➕ Tambah Produk Baru';
         document.getElementById('productName').value = '';
         document.getElementById('productCategory').value = 'sembako';
@@ -1010,11 +972,21 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        await saveProduct({ name, category, price, stock, emoji });
+        const result = await supabaseAPI.post('products', { name, category, price, stock, emoji });
+        if (result) {
+            showToast('Produk berhasil ditambahkan!', 'success');
+            await loadProducts();
+        } else {
+            const newId = Math.max(...products.map(p => p.id), 0) + 1;
+            products.push({ id: newId, name, category, price, stock, emoji });
+            renderProducts();
+            updateStats();
+            updateStockSelect();
+            showToast('Produk ditambahkan (lokal)!', 'success');
+        }
         document.getElementById('productModal').style.display = 'none';
     });
     
-    // History
     document.querySelector('[data-page="transactions"]').addEventListener('click', function() {
         document.getElementById('historyModal').style.display = 'flex';
         renderHistory();
@@ -1024,7 +996,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('historyModal').style.display = 'none';
     });
     
-    // AI
     document.getElementById('askAI').addEventListener('click', askAI);
     document.getElementById('aiInput').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') askAI();
@@ -1035,7 +1006,6 @@ document.addEventListener('DOMContentLoaded', function() {
         card.style.display = card.style.display === 'none' ? 'block' : 'none';
     });
     
-    // Navigation
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
         item.addEventListener('click', function() {
             document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
@@ -1052,7 +1022,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', function(e) {
             if (e.target === this) this.style.display = 'none';
