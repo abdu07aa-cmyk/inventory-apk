@@ -1,152 +1,316 @@
-/* =====================================================
-   WARUNGKITA PRO MAX — STATE.JS
-   Pusat penyimpanan data aplikasi (single source of truth).
-   Semua modul membaca/menulis data lewat objek STATE ini
-   alih-alih membuat variabel global terpisah-pisah, supaya
-   alurnya mudah ditelusuri.
+/**
+ * ============================================
+ * WARUNGKITA PRO MAX - State Management
+ * ============================================
+ * Mengelola semua state aplikasi secara terpusat
+ * Menggunakan pattern Observer untuk reactivity
+ */
 
-   Pola yang dipakai: STATE menyimpan data + STATE.subscribe()
-   untuk komponen yang ingin tahu kapan data berubah
-   (mis. cart berubah -> render ulang ringkasan keranjang).
-   ===================================================== */
+const AppState = {
+    // ========================================
+    // DATA STATE
+    // ========================================
+    products: [],
+    cart: [],
+    transactions: [],
+    customers: [],
+    currentShift: null,
+    
+    // ========================================
+    // UI STATE
+    // ========================================
+    currentView: 'dashboard',
+    currentCategory: 'all',
+    searchQuery: '',
+    theme: 'light',
+    isLoading: false,
+    isOnline: navigator.onLine,
+    
+    // ========================================
+    // CART STATE
+    // ========================================
+    discount: {
+        code: null,
+        type: null,
+        value: 0,
+        amount: 0
+    },
+    
+    // ========================================
+    // SUBSCRIBERS (Observer pattern)
+    // ========================================
+    _subscribers: {},
 
-const STATE = {
-  /* ---------- DATA UTAMA ---------- */
-  products: [],          // Daftar semua produk
-  transactions: [],       // Riwayat transaksi
-  customers: [],          // Daftar pelanggan
-  shifts: [],             // Riwayat shift kasir
+    // ========================================
+    // SUBSCRIBE - Register callback
+    // ========================================
+    subscribe(event, callback) {
+        if (!this._subscribers[event]) {
+            this._subscribers[event] = [];
+        }
+        this._subscribers[event].push(callback);
+    },
 
-  /* ---------- DATA TRANSAKSI BERJALAN ---------- */
-  cart: [],               // Item di keranjang saat ini: { productId, name, price, qty, subtotal }
-  heldCarts: [],          // Keranjang yang ditahan sementara (fitur Hold Cart)
-  activeDiscount: null,   // Kode diskon yang sedang aktif: { code, type, value }
-  activeCustomer: null,   // Pelanggan yang dipilih untuk transaksi saat ini
+    // ========================================
+    // EMIT - Trigger event
+    // ========================================
+    emit(event, data) {
+        if (this._subscribers[event]) {
+            this._subscribers[event].forEach(callback => {
+                try {
+                    callback(data);
+                } catch (error) {
+                    console.error(`❌ Subscriber error [${event}]:`, error);
+                }
+            });
+        }
+    },
 
-  /* ---------- SHIFT KASIR ---------- */
-  currentShift: null,     // Shift yang sedang berjalan, null jika belum buka kasir
+    // ========================================
+    // PRODUCTS
+    // ========================================
+    setProducts(products) {
+        this.products = products;
+        this.emit('products:changed', products);
+    },
 
-  /* ---------- UI STATE ---------- */
-  currentView: 'dashboard',
-  theme: 'light',
-  isSidebarCollapsed: false,
-  isLoading: false,
-  searchQuery: '',
-  activeCategory: 'all',
+    addProduct(product) {
+        this.products.push(product);
+        this.emit('products:changed', this.products);
+        this.emit('products:added', product);
+    },
 
-  /* ---------- STATUS KONEKSI ---------- */
-  isOnline: navigator.onLine,
-  isSupabaseConnected: false,
+    updateProduct(id, updates) {
+        const index = this.products.findIndex(p => p.id === id);
+        if (index !== -1) {
+            this.products[index] = { ...this.products[index], ...updates };
+            this.emit('products:changed', this.products);
+            this.emit('products:updated', this.products[index]);
+        }
+    },
 
-  /* ---------- SISTEM SUBSCRIBE/NOTIFY (mini pub-sub) ---------- */
-  _listeners: {},
+    removeProduct(id) {
+        this.products = this.products.filter(p => p.id !== id);
+        this.emit('products:changed', this.products);
+        this.emit('products:removed', id);
+    },
 
-  /**
-   * Mendaftarkan fungsi callback yang akan dipanggil saat
-   * sebuah "topik" state berubah (mis. 'cart', 'products').
-   * @param {string} topic - nama topik, bebas namun harus konsisten antar modul
-   * @param {Function} callback
-   * @returns {Function} fungsi untuk berhenti berlangganan (unsubscribe)
-   */
-  subscribe(topic, callback) {
-    if (!this._listeners[topic]) this._listeners[topic] = [];
-    this._listeners[topic].push(callback);
-    return () => {
-      this._listeners[topic] = this._listeners[topic].filter(fn => fn !== callback);
-    };
-  },
+    // ========================================
+    // CART
+    // ========================================
+    setCart(cart) {
+        this.cart = cart;
+        this.saveToStorage(CONFIG.storageKeys.cart, cart);
+        this.emit('cart:changed', cart);
+    },
 
-  /**
-   * Memberitahu semua subscriber suatu topik bahwa datanya berubah.
-   * Dipanggil secara manual setelah STATE.products / STATE.cart dsb diubah.
-   * @param {string} topic
-   */
-  notify(topic) {
-    (this._listeners[topic] || []).forEach(fn => fn(this));
-  },
+    addToCart(product, quantity = 1) {
+        const existing = this.cart.find(item => item.id === product.id);
+        
+        if (existing) {
+            existing.quantity += quantity;
+        } else {
+            this.cart.push({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                emoji: product.emoji,
+                quantity: quantity
+            });
+        }
+        
+        this.saveToStorage(CONFIG.storageKeys.cart, this.cart);
+        this.emit('cart:changed', this.cart);
+        this.emit('cart:itemAdded', product);
+    },
 
-  /* ---------- HELPER UNTUK MENGUBAH STATE + NOTIFY SEKALIGUS ---------- */
+    updateCartItem(productId, quantity) {
+        const item = this.cart.find(i => i.id === productId);
+        if (item) {
+            if (quantity <= 0) {
+                this.removeFromCart(productId);
+            } else {
+                item.quantity = quantity;
+                this.saveToStorage(CONFIG.storageKeys.cart, this.cart);
+                this.emit('cart:changed', this.cart);
+            }
+        }
+    },
 
-  setProducts(products) {
-    this.products = products;
-    this.notify('products');
-  },
+    removeFromCart(productId) {
+        this.cart = this.cart.filter(i => i.id !== productId);
+        this.saveToStorage(CONFIG.storageKeys.cart, this.cart);
+        this.emit('cart:changed', this.cart);
+        this.emit('cart:itemRemoved', productId);
+    },
 
-  setCart(cart) {
-    this.cart = cart;
-    this.notify('cart');
-  },
+    clearCart() {
+        this.cart = [];
+        this.discount = { code: null, type: null, value: 0, amount: 0 };
+        this.saveToStorage(CONFIG.storageKeys.cart, []);
+        this.emit('cart:changed', this.cart);
+        this.emit('cart:cleared');
+    },
 
-  setTransactions(transactions) {
-    this.transactions = transactions;
-    this.notify('transactions');
-  },
+    applyDiscount(code) {
+        const discountConfig = CONFIG.discountCodes[code.toUpperCase()];
+        if (!discountConfig) {
+            return { success: false, message: 'Kode diskon tidak valid' };
+        }
 
-  setCustomers(customers) {
-    this.customers = customers;
-    this.notify('customers');
-  },
+        const subtotal = this.getCartSubtotal();
+        if (subtotal < discountConfig.minPurchase) {
+            return { 
+                success: false, 
+                message: `Minimum pembelian ${Utils.formatCurrency(discountConfig.minPurchase)}` 
+            };
+        }
 
-  setCurrentView(view) {
-    this.currentView = view;
-    this.notify('view');
-  },
+        let amount = 0;
+        if (discountConfig.type === 'percent') {
+            amount = (subtotal * discountConfig.value) / 100;
+        } else {
+            amount = discountConfig.value;
+        }
 
-  setTheme(theme) {
-    this.theme = theme;
-    localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, theme);
-    this.notify('theme');
-  },
+        this.discount = {
+            code: code.toUpperCase(),
+            type: discountConfig.type,
+            value: discountConfig.value,
+            amount: amount
+        };
 
-  setCurrentShift(shift) {
-    this.currentShift = shift;
-    this.notify('shift');
-  },
+        this.emit('cart:discountApplied', this.discount);
+        return { success: true, amount };
+    },
 
-  /* ---------- GETTER TURUNAN (computed) ---------- */
+    getCartSubtotal() {
+        return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    },
 
-  /** Total harga semua item di keranjang sebelum diskon */
-  get cartSubtotal() {
-    return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  },
+    getCartTotal() {
+        return this.getCartSubtotal() - this.discount.amount;
+    },
 
-  /** Nominal potongan diskon aktif (dalam Rupiah) */
-  get cartDiscountAmount() {
-    if (!this.activeDiscount) return 0;
-    const { type, value } = this.activeDiscount;
-    if (type === 'percent') return Math.round(this.cartSubtotal * (value / 100));
-    if (type === 'fixed') return Math.min(value, this.cartSubtotal);
-    return 0;
-  },
+    // ========================================
+    // TRANSACTIONS
+    // ========================================
+    setTransactions(transactions) {
+        this.transactions = transactions;
+        this.emit('transactions:changed', transactions);
+    },
 
-  /** Total akhir setelah dikurangi diskon */
-  get cartTotal() {
-    return Math.max(0, this.cartSubtotal - this.cartDiscountAmount);
-  },
+    addTransaction(transaction) {
+        this.transactions.unshift(transaction);
+        this.emit('transactions:changed', this.transactions);
+        this.emit('transactions:added', transaction);
+    },
 
-  /** Jumlah total item (qty) di keranjang */
-  get cartItemCount() {
-    return this.cart.reduce((sum, item) => sum + item.qty, 0);
-  },
+    // ========================================
+    // CUSTOMERS
+    // ========================================
+    setCustomers(customers) {
+        this.customers = customers;
+        this.emit('customers:changed', customers);
+    },
 
-  /** Daftar produk dengan stok di bawah ambang batas */
-  get lowStockProducts() {
-    return this.products.filter(p => p.stock <= CONFIG.LOW_STOCK_THRESHOLD);
-  },
+    // ========================================
+    // SHIFT
+    // ========================================
+    setCurrentShift(shift) {
+        this.currentShift = shift;
+        if (shift) {
+            this.saveToStorage(CONFIG.storageKeys.currentShift, shift);
+        } else {
+            localStorage.removeItem(CONFIG.storageKeys.currentShift);
+        }
+        this.emit('shift:changed', shift);
+    },
 
-  /** Apakah shift kasir sedang berjalan */
-  get isShiftOpen() {
-    return this.currentShift !== null && this.currentShift.status === 'open';
-  },
+    // ========================================
+    // UI STATE
+    // ========================================
+    setView(view) {
+        this.currentView = view;
+        this.emit('view:changed', view);
+    },
 
-  /* ---------- RESET STATE TRANSAKSI BERJALAN ---------- */
-  resetCart() {
-    this.cart = [];
-    this.activeDiscount = null;
-    this.activeCustomer = null;
-    this.notify('cart');
-  },
+    setCategory(category) {
+        this.currentCategory = category;
+        this.emit('category:changed', category);
+    },
+
+    setSearchQuery(query) {
+        this.searchQuery = query;
+        this.emit('search:changed', query);
+    },
+
+    setTheme(theme) {
+        this.theme = theme;
+        document.documentElement.setAttribute('data-theme', theme);
+        this.saveToStorage(CONFIG.storageKeys.theme, theme);
+        this.emit('theme:changed', theme);
+    },
+
+    toggleTheme() {
+        const newTheme = this.theme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
+    },
+
+    setLoading(isLoading) {
+        this.isLoading = isLoading;
+        this.emit('loading:changed', isLoading);
+    },
+
+    setOnlineStatus(isOnline) {
+        this.isOnline = isOnline;
+        this.emit('online:changed', isOnline);
+    },
+
+    // ========================================
+    // LOCAL STORAGE HELPERS
+    // ========================================
+    saveToStorage(key, data) {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (error) {
+            console.error('❌ Error saving to localStorage:', error);
+        }
+    },
+
+    loadFromStorage(key, defaultValue = null) {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : defaultValue;
+        } catch (error) {
+            console.error('❌ Error loading from localStorage:', error);
+            return defaultValue;
+        }
+    },
+
+    // ========================================
+    // INITIALIZATION
+    // ========================================
+    init() {
+        // Load theme
+        const savedTheme = this.loadFromStorage(CONFIG.storageKeys.theme, 'light');
+        this.setTheme(savedTheme);
+
+        // Load cart
+        const savedCart = this.loadFromStorage(CONFIG.storageKeys.cart, []);
+        this.cart = savedCart;
+
+        // Load shift
+        const savedShift = this.loadFromStorage(CONFIG.storageKeys.currentShift, null);
+        this.currentShift = savedShift;
+
+        // Listen for online/offline
+        window.addEventListener('online', () => this.setOnlineStatus(true));
+        window.addEventListener('offline', () => this.setOnlineStatus(false));
+
+        console.log('%c✅ State module initialized', 'color: #10b981;');
+    }
 };
 
-// Inisialisasi tema dari localStorage saat file dimuat
-STATE.theme = localStorage.getItem(CONFIG.STORAGE_KEYS.THEME) || 'light';
+// Auto-init
+AppState.init();
