@@ -1,9 +1,9 @@
 /* =====================================================
-   WARUNGKITA PRO MAX — BASE.CSS
-   Reset dasar, typography global, dan styling scrollbar.
-   File ini TIDAK berisi komponen spesifik (lihat
-   components.css untuk itu) — hanya fondasi dasar.
-   ===================================================== */
+WARUNGKITA PRO MAX — BASE.CSS
+Reset dasar, typography global, dan styling scrollbar.
+File ini TIDAK berisi komponen spesifik (lihat
+components.css untuk itu) — hanya fondasi dasar.
+===================================================== */
 
 /* ---------- RESET ---------- */
 *,
@@ -92,6 +92,7 @@ input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 input[type="number"] {
   -moz-appearance: textfield;
 }
@@ -141,8 +142,8 @@ table {
 
 /* ---------- SCROLLBAR KUSTOM (Firefox) ---------- */
 * {
-scrollbar-width: thin;
-scrollbar-color: var(--color-border) transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 /* ---------- UTILITAS UMUM ---------- */
