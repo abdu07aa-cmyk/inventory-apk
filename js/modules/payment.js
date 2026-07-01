@@ -1,236 +1,380 @@
-/* =====================================================
-   WARUNGKITA PRO MAX — MODULES/PAYMENT.JS
-   Mengelola alur pembayaran: pemilihan metode bayar,
-   tampilan QRIS, perhitungan kembalian tunai, penyimpanan
-   transaksi ke database, pengurangan stok produk, dan
-   penampilan struk digital setelah transaksi berhasil.
-   ===================================================== */
+/**
+ * ============================================
+ * PAYMENT MODULE
+ * ============================================
+ * Mengelola proses pembayaran:
+ * - Multi-payment (cash, QRIS, transfer, e-wallet)
+ * - Hitung kembalian
+ * - Generate QRIS
+ * - Proses transaksi ke Supabase
+ * - Generate struk
+ */
 
 const PaymentModule = {
-  /** Metode pembayaran yang sedang dipilih di modal pembayaran */
-  selectedMethod: 'cash',
-  /** Nominal uang tunai yang diterima dari pelanggan (untuk hitung kembalian) */
-  cashReceived: 0,
+    currentMethod: 'cash',
+    cashReceived: 0,
+    transactionData: null,
 
-  /* ===================================================
-     MODAL PEMBAYARAN
-     =================================================== */
+    // ========================================
+    // INITIALIZATION
+    // ========================================
+    init() {
+        console.log('%c💳 PaymentModule initialized', 'color: #3b82f6;');
+        this.setupEventListeners();
+    },
 
-  /** Membuka modal pembayaran berdasarkan isi keranjang saat ini */
-  openPaymentModal() {
-    if (STATE.cart.length === 0) {
-      Utils.showToast('Keranjang masih kosong', 'warning');
-      return;
+    // ========================================
+    // OPEN PAYMENT MODAL
+    // ========================================
+    openPaymentModal() {
+        if (AppState.cart.length === 0) {
+            Utils.toast('Keranjang masih kosong', 'warning');
+            return;
+        }
+
+        if (!AppState.currentShift) {
+            Utils.toast('Buka shift kasir terlebih dahulu', 'warning');
+            return;
+        }
+
+        // Reset state
+        this.currentMethod = 'cash';
+        this.cashReceived = 0;
+        
+        // Update total display
+        const total = AppState.getCartTotal();
+        document.getElementById('paymentTotal').textContent = Utils.formatCurrency(total);
+        
+        // Reset cash input
+        document.getElementById('cashReceived').value = '';
+        document.getElementById('cashChange').textContent = Utils.formatCurrency(0);
+        
+        // Show cash section by default
+        this.switchPaymentMethod('cash');
+        
+        Utils.openModal('paymentModal');
+    },
+
+    // ========================================
+    // SWITCH PAYMENT METHOD
+    // ========================================
+    switchPaymentMethod(method) {
+        this.currentMethod = method;
+        
+        // Update active button
+        document.querySelectorAll('.payment-method').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.method === method);
+        });
+        
+        // Show/hide sections
+        const sections = ['cash', 'qris', 'transfer', 'ewallet'];
+        sections.forEach(m => {
+            const section = document.getElementById(`${m}PaymentSection`);
+            if (section) section.style.display = m === method ? 'block' : 'none';
+        });
+        
+        // Generate QRIS if needed
+        if (method === 'qris') {
+            this.generateQRIS();
+        }
+    },
+
+    // ========================================
+    // GENERATE QRIS
+    // ========================================
+    generateQRIS() {
+        const qrisContainer = document.getElementById('qrisCode');
+        if (!qrisContainer) return;
+        
+        qrisContainer.innerHTML = '';
+        
+        const total = AppState.getCartTotal();
+        const qrData = {
+            merchant: CONFIG.bankInfo.qrismMerchant,
+            amount: total,
+            timestamp: Date.now(),
+            trxCode: Utils.generateTransactionCode()
+        };
+        
+        try {
+            new QRCode(qrisContainer, {
+                text: JSON.stringify(qrData),
+                width: 256,
+                height: 256,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } catch (error) {
+            console.error('QRIS generation failed:', error);
+            qrisContainer.innerHTML = '<p class="text-danger">Gagal generate QRIS</p>';
+        }
+    },
+
+    // ========================================
+    // CALCULATE CHANGE
+    // ========================================
+    calculateChange() {
+        const total = AppState.getCartTotal();
+        const received = this.cashReceived;
+        const change = received - total;
+        
+        document.getElementById('cashChange').textContent = 
+            Utils.formatCurrency(Math.max(0, change));
+        
+        // Color indicator
+        const changeEl = document.getElementById('cashChange');
+        if (change < 0) {
+            changeEl.style.color = '#ef4444';
+        } else if (change === 0) {
+            changeEl.style.color = '#10b981';
+        } else {
+            changeEl.style.color = '#3b82f6';
+        }
+    },
+
+    // ========================================
+    // QUICK CASH
+    // ========================================
+    setQuickCash(amount) {
+        const cashInput = document.getElementById('cashReceived');
+        
+        if (amount === 'exact') {
+            this.cashReceived = AppState.getCartTotal();
+        } else {
+            this.cashReceived = parseInt(amount);
+        }
+        
+        cashInput.value = this.cashReceived;
+        this.calculateChange();
+    },
+
+    // ========================================
+    // PROCESS PAYMENT
+    // ========================================
+    async processPayment() {
+        const total = AppState.getCartTotal();
+        const customerName = document.getElementById('customerName')?.value || 'Umum';
+
+        // Validation for cash payment
+        if (this.currentMethod === 'cash') {
+            if (this.cashReceived < total) {
+                Utils.toast('Uang yang diterima kurang', 'error');
+                return;
+            }
+        }
+
+        try {
+            AppState.setLoading(true);
+            
+            // Prepare transaction data
+            const transaction = {
+                transaction_code: Utils.generateTransactionCode(),
+                total_amount: total,
+                discount_amount: AppState.discount.amount,
+                payment_method: this.currentMethod,
+                payment_status: 'paid',
+                customer_name: customerName,
+                shift_id: AppState.currentShift?.id,
+                cashier_name: AppState.currentShift?.cashier_name || 'Admin'
+            };
+
+            // Prepare items
+            const items = AppState.cart.map(item => ({
+                product_id: item.id,
+                product_name: item.name,
+                quantity: item.quantity,
+                price: item.price
+            }));
+
+            // Save to Supabase
+            const newTransaction = await API.transactions.create(transaction, items);
+            
+            // Add to state
+            AppState.addTransaction(newTransaction);
+            
+            // Update shift stats
+            if (AppState.currentShift) {
+                AppState.currentShift.total_transactions = 
+                    (AppState.currentShift.total_transactions || 0) + 1;
+                AppState.currentShift.total_sales = 
+                    (AppState.currentShift.total_sales || 0) + total;
+            }
+
+            // Store for receipt
+            this.transactionData = {
+                ...newTransaction,
+                items: items,
+                customer_name: customerName,
+                cash_received: this.currentMethod === 'cash' ? this.cashReceived : total,
+                change: this.currentMethod === 'cash' ? this.cashReceived - total : 0
+            };
+
+            // Clear cart
+            AppState.clearCart();
+            if (document.getElementById('customerName')) {
+                document.getElementById('customerName').value = '';
+            }
+            if (document.getElementById('discountCode')) {
+                document.getElementById('discountCode').value = '';
+            }
+
+            Utils.closeModal('paymentModal');
+            
+            // Show receipt
+            this.showReceipt();
+            
+            Utils.toast('Transaksi berhasil!', 'success');
+            Utils.playSound('success');
+            
+            // Refresh products (stock updated)
+            await ProductsModule.loadProducts();
+            
+        } catch (error) {
+            console.error('❌ Payment error:', error);
+            Utils.toast('Gagal memproses pembayaran: ' + error.message, 'error');
+        } finally {
+            AppState.setLoading(false);
+        }
+    },
+
+    // ========================================
+    // SHOW RECEIPT
+    // ========================================
+    showReceipt() {
+        if (!this.transactionData) return;
+
+        const tx = this.transactionData;
+        const receiptContent = document.getElementById('receiptContent');
+        
+        if (!receiptContent) return;
+
+        const itemsHtml = tx.items.map(item => `
+            <div class="receipt-item">
+                <span>${item.product_name}</span>
+                <div>
+                    <span>${item.quantity} x ${Utils.formatCurrency(item.price)}</span>
+                    <strong>${Utils.formatCurrency(item.quantity * item.price)}</strong>
+                </div>
+            </div>
+        `).join('');
+
+        receiptContent.innerHTML = `
+            <div class="receipt-header">
+                <h2>🏪 WarungKita</h2>
+                <p>Jl. Contoh No. 123, Jakarta</p>
+                <p>Telp: 021-12345678</p>
+            </div>
+            <div class="receipt-info">
+                <div><span>No:</span> <strong>${tx.transaction_code}</strong></div>
+                <div><span>Tanggal:</span> <strong>${Utils.formatDateTime(tx.created_at)}</strong></div>
+                <div><span>Kasir:</span> <strong>${tx.cashier_name}</strong></div>
+                <div><span>Pelanggan:</span> <strong>${tx.customer_name}</strong></div>
+            </div>
+            <div class="receipt-divider"></div>
+            <div class="receipt-items">
+                ${itemsHtml}
+            </div>
+            <div class="receipt-divider"></div>
+            <div class="receipt-summary">
+                <div><span>Subtotal</span> <span>${Utils.formatCurrency(tx.total_amount + tx.discount_amount)}</span></div>
+                ${tx.discount_amount > 0 ? `<div><span>Diskon</span> <span>- ${Utils.formatCurrency(tx.discount_amount)}</span></div>` : ''}
+                <div class="total"><span>TOTAL</span> <strong>${Utils.formatCurrency(tx.total_amount)}</strong></div>
+                <div><span>Bayar (${tx.payment_method})</span> <span>${Utils.formatCurrency(tx.cash_received)}</span></div>
+                ${tx.change > 0 ? `<div><span>Kembalian</span> <span>${Utils.formatCurrency(tx.change)}</span></div>` : ''}
+            </div>
+            <div class="receipt-footer">
+                <p>Terima kasih atas kunjungan Anda!</p>
+                <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
+            </div>
+        `;
+
+        Utils.openModal('receiptModal');
+    },
+
+    // ========================================
+    // PRINT RECEIPT
+    // ========================================
+    printReceipt() {
+        window.print();
+    },
+
+    // ========================================
+    // SHARE RECEIPT (WhatsApp)
+    // ========================================
+    shareReceipt() {
+        if (!this.transactionData) return;
+        
+        const tx = this.transactionData;
+        let message = `🏪 *WarungKita*\n`;
+        message += `No: ${tx.transaction_code}\n`;
+        message += `Tanggal: ${Utils.formatDateTime(tx.created_at)}\n\n`;
+        message += `*Items:*\n`;
+        
+        tx.items.forEach(item => {
+            message += `• ${item.product_name} ${item.quantity}x = ${Utils.formatCurrency(item.quantity * item.price)}\n`;
+        });
+        
+        message += `\n*Total: ${Utils.formatCurrency(tx.total_amount)}*\n`;
+        message += `Bayar: ${tx.payment_method.toUpperCase()}\n\n`;
+        message += `Terima kasih! 🙏`;
+
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+    },
+
+    // ========================================
+    // EVENT LISTENERS
+    // ========================================
+    setupEventListeners() {
+        // Process payment button
+        const btnProcess = document.getElementById('btnProcessPayment');
+        if (btnProcess) {
+            btnProcess.addEventListener('click', () => this.openPaymentModal());
+        }
+
+        // Payment method buttons
+        document.querySelectorAll('.payment-method').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.switchPaymentMethod(btn.dataset.method);
+            });
+        });
+
+        // Cash received input
+        const cashInput = document.getElementById('cashReceived');
+        if (cashInput) {
+            cashInput.addEventListener('input', (e) => {
+                this.cashReceived = parseInt(e.target.value) || 0;
+                this.calculateChange();
+            });
+        }
+
+        // Quick cash buttons
+        document.querySelectorAll('.quick-cash-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.setQuickCash(btn.dataset.amount);
+            });
+        });
+
+        // Confirm payment
+        const btnConfirm = document.getElementById('btnConfirmPayment');
+        if (btnConfirm) {
+            btnConfirm.addEventListener('click', () => this.processPayment());
+        }
+
+        // Print receipt
+        const btnPrint = document.getElementById('btnPrintReceipt');
+        if (btnPrint) {
+            btnPrint.addEventListener('click', () => this.printReceipt());
+        }
+
+        // Share receipt
+        const btnShare = document.getElementById('btnShareReceipt');
+        if (btnShare) {
+            btnShare.addEventListener('click', () => this.shareReceipt());
+        }
     }
-    // Shift opsional — tidak wajib buka shift untuk bertransaksi
-    // (bisa diaktifkan wajib dari Pengaturan di versi mendatang)
-
-    this.selectedMethod = 'cash';
-    this.cashReceived = 0;
-
-    ModalManager.open('payment', {
-      title: 'Proses Pembayaran',
-      size: 'md',
-      bodyHtml: this._paymentBodyHtml(),
-      footerHtml: `
-        <button class="btn btn-secondary" data-modal-close>Batal</button>
-        <button class="btn btn-primary" id="confirmPaymentBtn">
-          <i class="fa-solid fa-check"></i> Konfirmasi Pembayaran
-        </button>`,
-    });
-
-    document.getElementById('confirmPaymentBtn')?.addEventListener('click', () => this.confirmPayment());
-    this._bindPaymentMethodButtons();
-  },
-
-  _paymentBodyHtml() {
-    return `
-      <div class="summary-row summary-row-total" style="margin-bottom: var(--space-5);">
-        <span>Total Bayar</span><span>${Utils.formatCurrency(STATE.cartTotal)}</span>
-      </div>
-
-      <div class="payment-method-grid" id="paymentMethodGrid">
-        ${CONFIG.PAYMENT_METHODS.map(m => `
-          <button class="payment-method-option ${m.id === this.selectedMethod ? 'is-selected' : ''}" data-payment-method="${m.id}">
-            <i class="fa-solid ${m.icon}"></i>
-            <span>${m.label}</span>
-          </button>`).join('')}
-      </div>
-
-      <div id="paymentMethodDetail"></div>
-    `;
-  },
-
-  _bindPaymentMethodButtons() {
-    Utils.qsa('[data-payment-method]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.selectedMethod = btn.dataset.paymentMethod;
-        Utils.qsa('[data-payment-method]').forEach(b => b.classList.remove('is-selected'));
-        btn.classList.add('is-selected');
-        this._renderMethodDetail();
-      });
-    });
-    this._renderMethodDetail();
-  },
-
-  /** Merender input tambahan sesuai metode bayar yang dipilih (tunai/QRIS/dll) */
-  _renderMethodDetail() {
-    const container = document.getElementById('paymentMethodDetail');
-    if (!container) return;
-
-    if (this.selectedMethod === 'cash') {
-      container.innerHTML = `
-        <label class="form-field">
-          <span>Uang Diterima</span>
-          <input type="number" id="cashReceivedInput" placeholder="0" min="0">
-        </label>
-        <div class="summary-row" style="margin-top: var(--space-2);">
-          <span>Kembalian</span><span id="changeAmount">${Utils.formatCurrency(0)}</span>
-        </div>`;
-
-      document.getElementById('cashReceivedInput')?.addEventListener('input', (e) => {
-        this.cashReceived = Number(e.target.value) || 0;
-        const change = Math.max(0, this.cashReceived - STATE.cartTotal);
-        document.getElementById('changeAmount').textContent = Utils.formatCurrency(change);
-      });
-    } else if (this.selectedMethod === 'qris') {
-      container.innerHTML = `<div class="qris-display"><canvas id="qrisCanvas"></canvas><p>Pindai untuk membayar ${Utils.formatCurrency(STATE.cartTotal)}</p></div>`;
-      this._renderQrCode();
-    } else {
-      container.innerHTML = `<p style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Konfirmasi setelah pelanggan menyelesaikan pembayaran via ${this.selectedMethod}.</p>`;
-    }
-  },
-
-  _renderQrCode() {
-    const el = document.getElementById('qrisCanvas');
-    if (!el || typeof QRCode === 'undefined') return;
-    // QRCode.js butuh elemen <div>, jadi ganti canvas placeholder jadi div on the fly
-    const wrapper = document.createElement('div');
-    el.replaceWith(wrapper);
-    new QRCode(wrapper, {
-      text: `WARUNGKITA-PAY:${STATE.cartTotal}:${Date.now()}`,
-      width: 180,
-      height: 180,
-    });
-  },
-
-  /* ===================================================
-     KONFIRMASI & PROSES TRANSAKSI
-     =================================================== */
-
-  /** Memvalidasi & menyimpan transaksi setelah pembayaran dikonfirmasi */
-  async confirmPayment() {
-    if (this.selectedMethod === 'cash' && this.cashReceived < STATE.cartTotal) {
-      Utils.showToast('Uang diterima kurang dari total tagihan', 'error');
-      return;
-    }
-
-    const confirmBtn = document.getElementById('confirmPaymentBtn');
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
-    }
-
-    try {
-      const transaction = await this._saveTransaction();
-      await this._reduceStock();
-
-      Utils.playSound('cash');
-      Utils.showToast('Pembayaran berhasil!', 'success');
-
-      ModalManager.close();
-      this._showReceipt(transaction);
-
-      STATE.resetCart();
-    } catch (err) {
-      console.error('[Payment] Gagal memproses pembayaran:', err);
-      Utils.showToast('Gagal memproses pembayaran, coba lagi', 'error');
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> Konfirmasi Pembayaran';
-      }
-    }
-  },
-
-  /** Menyimpan record transaksi + item-itemnya ke database */
-  async _saveTransaction() {
-    const payload = {
-      total_amount: STATE.cartTotal,
-      payment_method: this.selectedMethod,
-      payment_status: 'paid',
-      customer_name: STATE.activeCustomer?.name || 'Umum',
-      discount: STATE.cartDiscountAmount,
-      shift_id: STATE.currentShift?.id || null,
-    };
-
-    const [transaction] = await API.transactions.create(payload);
-
-    const items = STATE.cart.map(item => ({
-      transaction_id: transaction.id,
-      product_id: item.productId,
-      quantity: item.qty,
-      price: item.price,
-    }));
-    await API.transactionItems.create(items);
-
-    const fullTransaction = { ...transaction, items, change: Math.max(0, this.cashReceived - STATE.cartTotal) };
-    STATE.setTransactions([fullTransaction, ...STATE.transactions]);
-
-    return fullTransaction;
-  },
-
-  /** Mengurangi stok setiap produk yang terjual sesuai kuantitas di keranjang */
-  async _reduceStock() {
-    for (const item of STATE.cart) {
-      const product = STATE.products.find(p => p.id === item.productId);
-      if (!product) continue;
-      const newStock = Math.max(0, product.stock - item.qty);
-      await ProductsModule.update(product.id, { stock: newStock });
-    }
-  },
-
-  /* ===================================================
-     STRUK DIGITAL
-     =================================================== */
-
-  _showReceipt(transaction) {
-    ModalManager.open('receipt', {
-      title: 'Struk Pembayaran',
-      size: 'sm',
-      bodyHtml: this._receiptHtml(transaction),
-      footerHtml: `
-        <button class="btn btn-secondary" data-modal-close>Tutup</button>
-        <button class="btn btn-primary" id="printReceiptBtn"><i class="fa-solid fa-print"></i> Cetak</button>`,
-    });
-
-    document.getElementById('printReceiptBtn')?.addEventListener('click', () => window.print());
-  },
-
-  _receiptHtml(t) {
-    const itemRows = t.items.map(item => {
-      const product = STATE.products.find(p => p.id === item.product_id);
-      return `<div class="receipt-row"><span>${Utils.escapeHtml(product?.name || 'Produk')} x${item.quantity}</span><span>${Utils.formatCurrency(item.price * item.quantity)}</span></div>`;
-    }).join('');
-
-    return `
-      <div class="receipt">
-        <div class="receipt-header">
-          <strong>${CONFIG.STORE.NAME}</strong><br>
-          <small>${CONFIG.STORE.ADDRESS}</small><br>
-          <small>${Utils.formatDateTime(t.created_at || new Date())}</small>
-        </div>
-        ${itemRows}
-        <div class="receipt-divider"></div>
-        <div class="receipt-row"><span>Diskon</span><span>- ${Utils.formatCurrency(t.discount || 0)}</span></div>
-        <div class="receipt-divider"></div>
-        <div class="receipt-total-row"><span>TOTAL</span><span>${Utils.formatCurrency(t.total_amount)}</span></div>
-        ${t.payment_method === 'cash' ? `
-          <div class="receipt-row"><span>Tunai</span><span>${Utils.formatCurrency(PaymentModule.cashReceived)}</span></div>
-          <div class="receipt-row"><span>Kembalian</span><span>${Utils.formatCurrency(t.change || 0)}</span></div>
-        ` : `<div class="receipt-row"><span>Metode</span><span>${Utils.escapeHtml(t.payment_method.toUpperCase())}</span></div>`}
-        <div class="receipt-header" style="border-bottom:none; border-top: 1px dashed var(--color-border); margin-top: var(--space-3); padding-top: var(--space-3);">
-          Terima kasih sudah berbelanja! 🙏
-        </div>
-      </div>`;
-  },
 };
+
+Object.freeze(PaymentModule);
+console.log('%c✅ PaymentModule loaded', 'color: #10b981;');
