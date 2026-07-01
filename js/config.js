@@ -16,7 +16,7 @@ const CONFIG = {
     // ⚠️ ISI DENGAN CREDENTIALS ANDA
     supabase: {
         url: 'https://marelgsluzshkwxwcjod.supabase.co', // Ganti dengan URL project Anda
-        apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg3MzIsImV4cCI6MjA5ODI4NDczMn0.73CLxhbxhO28UplJU8C1-mtNawlsMegVsORXY7PPzlgI', // Ganti dengan anon key Anda
+        apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg3MzIsImV4cCI6MjA5ODI4NDczMn0.73CLxhbxhO28UplJU8C1-mtNawlsMegVsORXY7PPzlg', // Ganti dengan anon key Anda
         schema: 'public'
     },
 
