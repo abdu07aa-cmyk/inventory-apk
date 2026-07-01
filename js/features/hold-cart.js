@@ -1,169 +1,158 @@
-/* =====================================================
-   WARUNGKITA PRO MAX — FEATURES/HOLD-CART.JS
-   Fitur "Tahan Keranjang" (Hold Cart): kasir bisa menahan
-   transaksi yang sedang berjalan (mis. pelanggan masih
-   mencari barang tambahan) tanpa kehilangan progres, lalu
-   melayani pelanggan lain, dan melanjutkan keranjang yang
-   ditahan kapan saja. Disimpan di localStorage agar tetap
-   ada walau halaman di-refresh.
-   ===================================================== */
+/**
+ * ============================================
+ * HOLD CART MODULE
+ * ============================================
+ * Menyimpan keranjang sementara (hold/resume)
+ */
 
 const HoldCartModule = {
-  /* ===================================================
-     MENAHAN KERANJANG SAAT INI
-     =================================================== */
+    heldCarts: [],
 
-  /** Menahan keranjang aktif, lalu mengosongkan keranjang kerja saat ini */
-  holdCurrentCart() {
-    if (STATE.cart.length === 0) {
-      Utils.showToast('Keranjang masih kosong, tidak ada yang bisa ditahan', 'warning');
-      return;
+    init() {
+        console.log('%c⏸️ HoldCartModule initialized', 'color: #3b82f6;');
+        this.loadHeldCarts();
+        this.setupEventListeners();
+        this.updateBadge();
+    },
+
+    loadHeldCarts() {
+        try {
+            const raw = localStorage.getItem(CONFIG.storageKeys.holdCarts);
+            this.heldCarts = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(this.heldCarts)) this.heldCarts = [];
+        } catch (e) {
+            console.warn('⚠️ Failed to load held carts:', e);
+            this.heldCarts = [];
+        }
+    },
+
+    saveHeldCarts() {
+        try {
+            localStorage.setItem(CONFIG.storageKeys.holdCarts, JSON.stringify(this.heldCarts));
+        } catch (e) {
+            console.error('❌ Save held carts failed:', e);
+        }
+    },
+
+    holdCart(customerName = '') {
+        if (AppState.cart.length === 0) {
+            Utils.toast('Keranjang kosong, tidak bisa di-hold', 'warning');
+            return;
+        }
+
+        const heldCart = {
+            id: Date.now(),
+            customerName: customerName || `Pelanggan ${this.heldCarts.length + 1}`,
+            items: [...AppState.cart],
+            discount: { ...AppState.discount },
+            heldAt: new Date().toISOString()
+        };
+
+        this.heldCarts.push(heldCart);
+        this.saveHeldCarts();
+        
+        // Clear current cart
+        AppState.clearCart();
+        
+        this.updateBadge();
+        Utils.toast(`⏸️ Keranjang di-hold: ${heldCart.customerName}`, 'success');
+        Utils.playSound('click');
+    },
+
+    resumeCart(heldId) {
+        const held = this.heldCarts.find(h => h.id === heldId);
+        if (!held) return;
+
+        if (AppState.cart.length > 0) {
+            const confirm = window.confirm('Keranjang saat ini akan diganti. Lanjutkan?');
+            if (!confirm) return;
+        }
+
+        // Restore cart
+        AppState.setCart([...held.items]);
+        AppState.discount = held.discount || { code: null, type: null, value: 0, amount: 0 };
+        
+        // Set customer name
+        const customerInput = document.getElementById('customerName');
+        if (customerInput) customerInput.value = held.customerName;
+
+        // Remove from held
+        this.heldCarts = this.heldCarts.filter(h => h.id !== heldId);
+        this.saveHeldCarts();
+        
+        this.updateBadge();
+        Utils.toast(`▶️ Keranjang dilanjutkan: ${held.customerName}`, 'success');
+        
+        // Switch to POS view
+        if (typeof AppMain !== 'undefined') {
+            AppMain.switchView('pos');
+        }
+    },
+
+    deleteHeldCart(heldId) {
+        const held = this.heldCarts.find(h => h.id === heldId);
+        if (!held) return;
+
+        if (!confirm(`Hapus keranjang tertahan "${held.customerName}"?`)) return;
+
+        this.heldCarts = this.heldCarts.filter(h => h.id !== heldId);
+        this.saveHeldCarts();
+        this.updateBadge();
+        this.renderHeldList();
+        Utils.toast('Keranjang dihapus', 'info');
+    },
+
+    showHeldCarts() {
+        if (this.heldCarts.length === 0) {
+            Utils.toast('Tidak ada keranjang tertahan', 'info');
+            return;
+        }
+
+        let html = '<h3>⏸️ Keranjang Tertahan</h3><div style="margin-top:1rem;">';
+        this.heldCarts.forEach(held => {
+            const total = held.items.reduce((s, i) => s + (i.price * i.quantity), 0);
+            const itemCount = held.items.reduce((s, i) => s + i.quantity, 0);
+            html += `
+                <div style="padding:1rem;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0.5rem;">
+                    <strong>${held.customerName}</strong><br>
+                    <small>${itemCount} items • ${Utils.formatCurrency(total)}</small><br>
+                    <small style="color:#64748b;">${Utils.getRelativeTime(held.heldAt)}</small>
+                    <div style="margin-top:0.5rem;">
+                        <button onclick="HoldCartModule.resumeCart(${held.id})" style="padding:0.25rem 0.75rem;background:#3b82f6;color:white;border:none;border-radius:4px;cursor:pointer;">▶️ Lanjutkan</button>
+                        <button onclick="HoldCartModule.deleteHeldCart(${held.id})" style="padding:0.25rem 0.75rem;background:#ef4444;color:white;border:none;border-radius:4px;cursor:pointer;margin-left:0.25rem;">🗑️ Hapus</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        // Use simple alert for now
+        const w = window.open('', '_blank', 'width=400,height=600');
+        w.document.write(`<html><head><title>Keranjang Tertahan</title></head><body style="font-family:sans-serif;padding:1rem;">${html}</body></html>`);
+    },
+
+    renderHeldList() {
+        // Placeholder for UI rendering
+    },
+
+    updateBadge() {
+        const badges = document.querySelectorAll('.hold-badge, .hold-count');
+        badges.forEach(badge => {
+            badge.textContent = this.heldCarts.length;
+            badge.style.display = this.heldCarts.length > 0 ? 'flex' : 'none';
+        });
+    },
+
+    setupEventListeners() {
+        const btnHold = document.getElementById('btnHoldCart');
+        if (btnHold) {
+            btnHold.addEventListener('click', () => {
+                const customerName = document.getElementById('customerName')?.value || '';
+                this.holdCart(customerName);
+            });
+        }
     }
-
-    const held = {
-      id: Utils.generateId('HOLD'),
-      label: STATE.activeCustomer?.name || `Pelanggan ${STATE.heldCarts.length + 1}`,
-      cart: Utils.deepClone(STATE.cart),
-      discount: STATE.activeDiscount ? Utils.deepClone(STATE.activeDiscount) : null,
-      customer: STATE.activeCustomer ? Utils.deepClone(STATE.activeCustomer) : null,
-      heldAt: new Date().toISOString(),
-    };
-
-    STATE.heldCarts.push(held);
-    this._saveToLocalStorage();
-
-    STATE.resetCart();
-    Utils.showToast(`Keranjang ditahan sebagai "${held.label}"`, 'success');
-  },
-
-  /* ===================================================
-     MELANJUTKAN KERANJANG YANG DITAHAN
-     =================================================== */
-
-  /**
-   * Mengembalikan keranjang yang ditahan menjadi keranjang aktif.
-   * Jika keranjang aktif saat ini masih berisi item, kasir akan
-   * diminta konfirmasi karena akan ditimpa.
-   * @param {string} holdId
-   */
-  resumeCart(holdId) {
-    const held = STATE.heldCarts.find(h => h.id === holdId);
-    if (!held) return;
-
-    if (STATE.cart.length > 0) {
-      const confirmed = window.confirm('Keranjang saat ini belum kosong. Lanjutkan keranjang yang ditahan dan timpa keranjang aktif?');
-      if (!confirmed) return;
-    }
-
-    STATE.cart = Utils.deepClone(held.cart);
-    STATE.activeDiscount = held.discount ? Utils.deepClone(held.discount) : null;
-    STATE.activeCustomer = held.customer ? Utils.deepClone(held.customer) : null;
-    STATE.notify('cart');
-
-    this._removeHeld(holdId);
-    Utils.showToast(`Keranjang "${held.label}" dilanjutkan`, 'success');
-  },
-
-  /**
-   * Menghapus keranjang yang ditahan tanpa melanjutkannya
-   * (mis. pelanggan batal jadi membeli).
-   * @param {string} holdId
-   */
-  discardHeld(holdId) {
-    const held = STATE.heldCarts.find(h => h.id === holdId);
-    if (!held) return;
-
-    const confirmed = window.confirm(`Hapus keranjang yang ditahan "${held.label}"? Tindakan ini tidak bisa dibatalkan.`);
-    if (!confirmed) return;
-
-    this._removeHeld(holdId);
-    Utils.showToast('Keranjang yang ditahan telah dihapus', 'info');
-  },
-
-  _removeHeld(holdId) {
-    STATE.heldCarts = STATE.heldCarts.filter(h => h.id !== holdId);
-    this._saveToLocalStorage();
-    this._renderHeldListIfOpen();
-  },
-
-  /* ===================================================
-     PERSISTENSI LOKAL
-     =================================================== */
-
-  _saveToLocalStorage() {
-    localStorage.setItem(CONFIG.STORAGE_KEYS.HELD_CARTS, JSON.stringify(STATE.heldCarts));
-  },
-
-  /** Memuat keranjang yang ditahan dari localStorage saat aplikasi dibuka */
-  loadFromLocalStorage() {
-    try {
-      const raw = localStorage.getItem(CONFIG.STORAGE_KEYS.HELD_CARTS);
-      STATE.heldCarts = raw ? JSON.parse(raw) : [];
-    } catch (err) {
-      console.error('[HoldCart] Gagal memuat keranjang tertahan:', err);
-      STATE.heldCarts = [];
-    }
-  },
-
-  /* ===================================================
-     MODAL: DAFTAR KERANJANG YANG DITAHAN
-     =================================================== */
-
-  openHeldCartsModal() {
-    ModalManager.open('heldCarts', {
-      title: `Keranjang Ditahan (${STATE.heldCarts.length})`,
-      size: 'sm',
-      bodyHtml: this._heldListHtml(),
-      footerHtml: `<button class="btn btn-secondary btn-block" data-modal-close>Tutup</button>`,
-    });
-    this._bindHeldListEvents();
-  },
-
-  _heldListHtml() {
-    if (STATE.heldCarts.length === 0) {
-      return `<div class="cart-empty-state"><i class="fa-solid fa-pause"></i><p>Belum ada keranjang yang ditahan</p></div>`;
-    }
-
-    return STATE.heldCarts.map(h => {
-      const total = h.cart.reduce((sum, item) => sum + item.subtotal, 0);
-      return `
-        <div style="display:flex; align-items:center; justify-content:space-between; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border);">
-          <div>
-            <strong style="font-size: var(--font-size-sm);">${Utils.escapeHtml(h.label)}</strong><br>
-            <small>${h.cart.length} item • ${Utils.formatCurrency(total)} • ${Utils.formatRelativeTime(h.heldAt)}</small>
-          </div>
-          <div style="display:flex; gap: var(--space-2);">
-            <button class="btn btn-primary" style="padding: var(--space-2) var(--space-3);" data-resume-hold="${h.id}">Lanjutkan</button>
-            <button class="icon-btn" style="color: var(--color-danger);" data-discard-hold="${h.id}" aria-label="Hapus">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        </div>`;
-    }).join('');
-  },
-
-  _bindHeldListEvents() {
-    Utils.qsa('[data-resume-hold]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.resumeCart(btn.dataset.resumeHold);
-        ModalManager.close();
-      });
-    });
-    Utils.qsa('[data-discard-hold]').forEach(btn => {
-      btn.addEventListener('click', () => this.discardHeld(btn.dataset.discardHold));
-    });
-  },
-
-  /** Merender ulang isi modal jika sedang terbuka (dipanggil setelah perubahan data) */
-  _renderHeldListIfOpen() {
-    const body = document.querySelector('#modalRoot .modal-body');
-    if (body && document.querySelector('.modal-header h3')?.textContent.includes('Keranjang Ditahan')) {
-      body.innerHTML = this._heldListHtml();
-      this._bindHeldListEvents();
-    }
-  },
-
-  init() {
-    this.loadFromLocalStorage();
-  },
 };
+
+Object.freeze(HoldCartModule);
+console.log('%c✅ HoldCartModule loaded', 'color: #10b981;');
