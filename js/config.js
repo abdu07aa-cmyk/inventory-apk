@@ -1,98 +1,167 @@
-/* =====================================================
-   WARUNGKITA PRO MAX — CONFIG.JS
-   Konfigurasi koneksi Supabase dan konstanta global
-   aplikasi. File ini HARUS dimuat paling pertama
-   (sebelum state.js, api.js, dll) karena modul lain
-   bergantung pada objek CONFIG di sini.
-   ===================================================== */
+/**
+ * ============================================
+ * WARUNGKITA PRO MAX - Configuration
+ * ============================================
+ * File ini berisi semua konfigurasi aplikasi:
+ * - Supabase credentials
+ * - Konstanta aplikasi
+ * - Default values
+ * - Discount codes
+ */
 
 const CONFIG = {
-  /* ---------- SUPABASE ---------- */
-  // URL project Supabase. Bisa di-override dari halaman Pengaturan
-  // dan akan disimpan ke localStorage (lihat js/modules/auth.js).
-  SUPABASE_URL: localStorage.getItem('wk_supabase_url') || 'https://marelgsluzshkwxwcjod.supabase.co',
+    // ========================================
+    // SUPABASE CONFIGURATION
+    // ========================================
+    // ⚠️ ISI DENGAN CREDENTIALS ANDA
+    supabase: {
+        url: 'https://marelgsluzshkwxwcjod.supabase.co', // Ganti dengan URL project Anda
+        apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg3MzIsImV4cCI6MjA5ODI4NDczMn0.73CLxhbxhO28UplJU8C1-mtNawlsMegVsORXY7PPzlgI', // Ganti dengan anon key Anda
+        schema: 'public'
+    },
 
-  // Anon/public key Supabase. JANGAN pernah commit service_role key di sini.
-  SUPABASE_ANON_KEY: localStorage.getItem('wk_supabase_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg3MzIsImV4cCI6MjA5ODI4NDczMn0.73CLxhbxhO28UplJU8C1-mtNawlsMegVsORXY7PPzlg',
+    // ========================================
+    // APP INFO
+    // ========================================
+    app: {
+        name: 'WarungKita PRO MAX',
+        version: '2.0.0',
+        currency: 'IDR',
+        currencySymbol: 'Rp',
+        locale: 'id-ID',
+        timezone: 'Asia/Jakarta'
+    },
 
-  // Endpoint REST Supabase (PostgREST). Dipakai oleh js/api.js
-  get SUPABASE_REST_URL() {
-    return `${this.SUPABASE_URL}/rest/v1`;
-  },
+    // ========================================
+    // DATABASE TABLES
+    // ========================================
+    tables: {
+        products: 'products',
+        customers: 'customers',
+        shifts: 'shifts',
+        transactions: 'transactions',
+        transactionItems: 'transaction_items',
+        stockHistory: 'stock_history'
+    },
 
-  /* ---------- NAMA TABEL DATABASE ---------- */
-  TABLES: {
-    PRODUCTS: 'products',
-    TRANSACTIONS: 'transactions',
-    TRANSACTION_ITEMS: 'transaction_items',
-    SHIFTS: 'shifts',
-    CUSTOMERS: 'customers',
-  },
+    // ========================================
+    // CATEGORIES
+    // ========================================
+    categories: [
+        { id: 'all', name: 'Semua', icon: 'fas fa-th', emoji: '📦' },
+        { id: 'makanan', name: 'Makanan', icon: 'fas fa-utensils', emoji: '🍱' },
+        { id: 'minuman', name: 'Minuman', icon: 'fas fa-glass-whiskey', emoji: '🥤' },
+        { id: 'snack', name: 'Snack', icon: 'fas fa-cookie', emoji: '🍿' },
+        { id: 'household', name: 'Rumah Tangga', icon: 'fas fa-home', emoji: '🏠' },
+        { id: 'lainnya', name: 'Lainnya', icon: 'fas fa-box', emoji: '📦' }
+    ],
 
-  /* ---------- INFORMASI TOKO ---------- */
-  STORE: {
-    NAME: 'WarungKita',
-    TAGLINE: 'Belanja Hemat, Hidup Nikmat',
-    ADDRESS: 'Jl. Contoh No. 123, Jakarta',
-    PHONE: '0812-3456-7890',
-  },
+    // ========================================
+    // PAYMENT METHODS
+    // ========================================
+    paymentMethods: [
+        { id: 'cash', name: 'Tunai', icon: 'fas fa-money-bill-wave', color: '#10b981' },
+        { id: 'qris', name: 'QRIS', icon: 'fas fa-qrcode', color: '#3b82f6' },
+        { id: 'transfer', name: 'Transfer', icon: 'fas fa-university', color: '#8b5cf6' },
+        { id: 'ewallet', name: 'E-Wallet', icon: 'fas fa-wallet', color: '#f59e0b' }
+    ],
 
-  /* ---------- METODE PEMBAYARAN ---------- */
-  PAYMENT_METHODS: [
-    { id: 'cash', label: 'Tunai', icon: 'fa-money-bill-wave' },
-    { id: 'qris', label: 'QRIS', icon: 'fa-qrcode' },
-    { id: 'transfer', label: 'Transfer Bank', icon: 'fa-building-columns' },
-    { id: 'ewallet', label: 'E-Wallet', icon: 'fa-wallet' },
-  ],
+    // ========================================
+    // DISCOUNT CODES
+    // ========================================
+    discountCodes: {
+        'WARUNG10': { type: 'percent', value: 10, minPurchase: 50000, description: 'Diskon 10% min. 50rb' },
+        'HEMAT20': { type: 'percent', value: 20, minPurchase: 100000, description: 'Diskon 20% min. 100rb' },
+        'PROMO50': { type: 'fixed', value: 50000, minPurchase: 200000, description: 'Potongan 50rb min. 200rb' },
+        'NEWUSER': { type: 'percent', value: 15, minPurchase: 0, description: 'Diskon 15% pengguna baru' }
+    },
 
-  /* ---------- KODE DISKON BAWAAN ---------- */
-  DISCOUNT_CODES: {
-    WARUNG10: { type: 'percent', value: 10, label: 'Diskon 10%' },
-    HEMAT20: { type: 'percent', value: 20, label: 'Diskon 20%' },
-    PROMO50: { type: 'percent', value: 50, label: 'Diskon 50%' },
-  },
+    // ========================================
+    // STOCK THRESHOLDS
+    // ========================================
+    stock: {
+        lowStockThreshold: 10, // Alert jika stok <= 10
+        criticalStockThreshold: 5, // Critical jika stok <= 5
+        defaultMinStock: 5
+    },
 
-  /* ---------- AMBANG BATAS STOK MENIPIS ---------- */
-  LOW_STOCK_THRESHOLD: 5,
+    // ========================================
+    // UI SETTINGS
+    // ========================================
+    ui: {
+        itemsPerPage: 20,
+        animationDuration: 250,
+        toastDuration: 3000,
+        maxCartItems: 100,
+        searchDebounce: 300
+    },
 
-  /* ---------- KEYBOARD SHORTCUTS ---------- */
-  SHORTCUTS: {
-    FOCUS_SEARCH: { key: 'k', ctrlKey: true },
-    NEW_PRODUCT: { key: 'n', ctrlKey: true },
-    TOGGLE_DARK_MODE: { key: 'd', ctrlKey: true },
-    PROCESS_PAYMENT: { key: 'F9' },
-    CLOSE_ESCAPE: { key: 'Escape' },
-  },
+    // ========================================
+    // BANK INFO (untuk transfer)
+    // ========================================
+    bankInfo: {
+        bankName: 'BCA',
+        accountNumber: '1234567890',
+        accountName: 'WarungKita',
+        qrismMerchant: 'WARUNGKITA'
+    },
 
-  /* ---------- PENGATURAN UMUM ---------- */
-  CURRENCY: 'IDR',
-  CURRENCY_LOCALE: 'id-ID',
-  DEFAULT_PAGE_SIZE: 20,
+    // ========================================
+    // KEYBOARD SHORTCUTS
+    // ========================================
+    shortcuts: {
+        search: 'ctrl+k',
+        newProduct: 'ctrl+n',
+        toggleTheme: 'ctrl+d',
+        processPayment: 'f9',
+        clearCart: 'esc',
+        holdCart: 'ctrl+h'
+    },
 
-  /* ---------- KUNCI LOCALSTORAGE (untuk offline-first / fallback) ---------- */
-  STORAGE_KEYS: {
-    PRODUCTS: 'wk_products',
-    TRANSACTIONS: 'wk_transactions',
-    CART: 'wk_cart',
-    CUSTOMERS: 'wk_customers',
-    SHIFTS: 'wk_shifts',
-    HELD_CARTS: 'wk_held_carts',
-    THEME: 'wk_theme',
-    SYNC_QUEUE: 'wk_sync_queue',
-  },
-
-  /* ---------- FLAG FITUR (untuk mengaktifkan/menonaktifkan fitur secara cepat) ---------- */
-  FEATURES: {
-    OFFLINE_MODE: true,
-    AI_ASSISTANT: true,
-    SOUND_EFFECTS: true,
-    BARCODE_SCANNER: true,
-  },
+    // ========================================
+    // LOCAL STORAGE KEYS
+    // ========================================
+    storageKeys: {
+        cart: 'warungkita_cart',
+        theme: 'warungkita_theme',
+        currentShift: 'warungkita_shift',
+        holdCarts: 'warungkita_hold_carts',
+        offlineQueue: 'warungkita_offline_queue',
+        lastSync: 'warungkita_last_sync',
+        productsCache: 'warungkita_products_cache'
+    }
 };
 
-// Bekukan objek konfigurasi tingkat atas agar tidak sengaja
-// diubah dari modul lain (mutasi nilai di dalam TABLES/STORE
-// tetap dimungkinkan kecuali ikut di-freeze juga).
-Object.freeze(CONFIG.TABLES);
-Object.freeze(CONFIG.STORE);
-Object.freeze(CONFIG.STORAGE_KEYS);
+// ============================================
+// FREEZE CONFIG (prevent accidental changes)
+// ============================================
+Object.freeze(CONFIG);
+Object.freeze(CONFIG.supabase);
+Object.freeze(CONFIG.app);
+Object.freeze(CONFIG.tables);
+Object.freeze(CONFIG.categories);
+Object.freeze(CONFIG.paymentMethods);
+Object.freeze(CONFIG.discountCodes);
+Object.freeze(CONFIG.stock);
+Object.freeze(CONFIG.ui);
+Object.freeze(CONFIG.bankInfo);
+Object.freeze(CONFIG.shortcuts);
+Object.freeze(CONFIG.storageKeys);
+
+// ============================================
+// VALIDATION
+// ============================================
+/**
+ * Cek apakah Supabase sudah dikonfigurasi
+ * @returns {boolean}
+ */
+function isSupabaseConfigured() {
+    return CONFIG.supabase.apiKey !== 'PASTE_ANON_KEY_ANDA_DISINI' 
+        && CONFIG.supabase.apiKey.length > 20;
+}
+
+// Log status konfigurasi saat load
+console.log('%c🏪 WarungKita PRO MAX', 'color: #3b82f6; font-size: 20px; font-weight: bold;');
+console.log(`%cVersion: ${CONFIG.app.version}`, 'color: #10b981;');
+console.log(`%cSupabase: ${isSupabaseConfigured() ? '✅ Terhubung' : '⚠️ Belum dikonfigurasi'}`, 
+    `color: ${isSupabaseConfigured() ? '#10b981' : '#f59e0b'};`);
