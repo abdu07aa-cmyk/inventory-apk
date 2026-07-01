@@ -218,3 +218,73 @@
   display: flex;
   gap: var(--space-2);
 }
+/* ============== ICON SELECTOR (Untuk Tambah Produk) ============== */
+.icon-selector-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+  display: block;
+}
+
+.icon-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+}
+
+.icon-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-surface);
+}
+
+.icon-option:hover {
+  border-color: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-option.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-50);
+}
+
+.icon-option svg {
+  width: 32px;
+  height: 32px;
+  stroke: var(--color-text-primary);
+  margin-bottom: 6px;
+  transition: stroke var(--transition-fast);
+}
+
+.icon-option.is-selected svg {
+  stroke: var(--color-primary);
+}
+
+.icon-option span {
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.icon-option.is-selected span {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
