@@ -1,140 +1,138 @@
-/* =====================================================
-   WARUNGKITA PRO MAX — MODULES/AI.JS
-   AI Assistant sederhana berbasis pencocokan keyword
-   (belum terhubung ke LLM eksternal). Bisa menjawab
-   pertanyaan umum seputar stok, produk terlaris, dan
-   ringkasan penjualan langsung dari data di STATE.
-
-   Catatan untuk pengembangan lanjutan: ganti fungsi
-   `_generateReply()` dengan pemanggilan API LLM (mis.
-   Anthropic API) saat fitur "AI Assistant (LLM)" pada
-   roadmap dikerjakan.
-   ===================================================== */
+/**
+ * ============================================
+ * AI MODULE
+ * ============================================
+ * AI Assistant berbasis keyword
+ * Menjawab pertanyaan & menjalankan perintah
+ */
 
 const AIModule = {
-  conversationHistory: [],
+    chatHistory: [],
 
-  /* ===================================================
-     MODAL AI ASSISTANT
-     =================================================== */
+    init() {
+        console.log('%c🤖 AIModule initialized', 'color: #3b82f6;');
+        this.setupEventListeners();
+    },
 
-  openAssistant() {
-    ModalManager.open('ai', {
-      title: '🤖 AI Assistant',
-      size: 'md',
-      bodyHtml: `
-        <div class="ai-chat-window" id="aiChatWindow">
-          ${this.conversationHistory.length === 0 ? this._welcomeMessageHtml() : this.conversationHistory.map(m => this._messageHtml(m)).join('')}
-        </div>
-        <div class="ai-input-row">
-          <input type="text" id="aiInput" placeholder="Tanya sesuatu, mis. 'stok menipis apa saja?'">
-          <button class="btn btn-primary" id="aiSendBtn"><i class="fa-solid fa-paper-plane"></i></button>
-        </div>`,
-      footerHtml: '',
-    });
+    setupEventListeners() {
+        const btnAI = document.getElementById('btnAI');
+        if (btnAI) {
+            btnAI.addEventListener('click', () => Utils.openModal('aiModal'));
+        }
 
-    document.getElementById('aiSendBtn')?.addEventListener('click', () => this._handleSend());
-    document.getElementById('aiInput')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this._handleSend();
-    });
+        const btnSend = document.getElementById('btnSendAI');
+        if (btnSend) {
+            btnSend.addEventListener('click', () => this.processInput());
+        }
 
-    this._scrollChatToBottom();
-  },
+        const input = document.getElementById('aiInput');
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.processInput();
+            });
+        }
+    },
 
-  _welcomeMessageHtml() {
-    return `<div class="ai-message is-bot">Halo! Saya asisten WarungKita. Saya bisa bantu cek stok, produk terlaris, atau ringkasan penjualan hari ini. Coba tanya saya sesuatu! 😊</div>`;
-  },
+    processInput() {
+        const input = document.getElementById('aiInput');
+        if (!input || !input.value.trim()) return;
 
-  _messageHtml(msg) {
-    return `<div class="ai-message ${msg.role === 'user' ? 'is-user' : 'is-bot'}">${Utils.escapeHtml(msg.text)}</div>`;
-  },
+        const message = input.value.trim();
+        this.addMessage(message, 'user');
+        input.value = '';
 
-  _handleSend() {
-    const input = document.getElementById('aiInput');
-    const text = input?.value.trim();
-    if (!text) return;
+        // Process command
+        const response = this.processCommand(message);
+        
+        setTimeout(() => {
+            this.addMessage(response, 'ai');
+        }, 500);
+    },
 
-    this.conversationHistory.push({ role: 'user', text });
-    const reply = this._generateReply(text);
-    this.conversationHistory.push({ role: 'bot', text: reply });
+    addMessage(text, sender) {
+        const chat = document.getElementById('aiChat');
+        if (!chat) return;
 
-    input.value = '';
-    this._renderChatWindow();
-  },
+        const msg = document.createElement('div');
+        msg.className = sender === 'user' ? 'user-message' : 'ai-message';
+        
+        if (sender === 'user') {
+            msg.innerHTML = `
+                <div class="user-text">${text}</div>
+                <div class="user-avatar"><i class="fas fa-user"></i></div>
+            `;
+        } else {
+            msg.innerHTML = `
+                <div class="ai-avatar">🤖</div>
+                <div class="ai-text">${text}</div>
+            `;
+        }
 
-  _renderChatWindow() {
-    const window_ = document.getElementById('aiChatWindow');
-    if (!window_) return;
-    window_.innerHTML = this.conversationHistory.map(m => this._messageHtml(m)).join('');
-    this._scrollChatToBottom();
-  },
+        chat.appendChild(msg);
+        chat.scrollTop = chat.scrollHeight;
+    },
 
-  _scrollChatToBottom() {
-    const window_ = document.getElementById('aiChatWindow');
-    if (window_) window_.scrollTop = window_.scrollHeight;
-  },
+    processCommand(message) {
+        const msg = message.toLowerCase();
 
-  /* ===================================================
-     LOGIKA KEYWORD-BASED (belum LLM)
-     =================================================== */
+        // Greeting
+        if (msg.match(/halo|hai|hello|hi/)) {
+            return 'Halo! Ada yang bisa saya bantu? 🙌';
+        }
 
-  /**
-   * Menghasilkan balasan berdasarkan pencocokan kata kunci
-   * sederhana terhadap pesan pengguna.
-   * @param {string} message
-   * @returns {string}
-   */
-  _generateReply(message) {
-    const q = message.toLowerCase();
+        // Total penjualan
+        if (msg.match(/total|pendapatan|penjualan hari/)) {
+            const today = AppState.transactions.filter(t => {
+                const d = new Date(t.created_at);
+                const today = new Date();
+                return d.toDateString() === today.toDateString();
+            });
+            const total = today.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+            return `📊 Penjualan hari ini: <strong>${Utils.formatCurrency(total)}</strong> dari <strong>${today.length}</strong> transaksi`;
+        }
 
-    if (q.includes('stok menipis') || q.includes('stok habis') || q.includes('hampir habis')) {
-      return this._lowStockReply();
+        // Stok menipis
+        if (msg.match(/stok|menipis|habis/)) {
+            const lowStock = AppState.products.filter(p => p.stock <= CONFIG.stock.lowStockThreshold);
+            if (lowStock.length === 0) {
+                return '✅ Semua stok aman! Tidak ada produk yang menipis.';
+            }
+            const list = lowStock.slice(0, 5).map(p => `• ${p.emoji} ${p.name}: ${p.stock} pcs`).join('<br>');
+            return `⚠️ Ada <strong>${lowStock.length}</strong> produk stok menipis:<br>${list}`;
+        }
+
+        // Produk terlaris
+        if (msg.match(/terlaris|best seller|paling laku/)) {
+            return '🏆 Fitur produk terlaris akan segera hadir!';
+        }
+
+        // Bantuan
+        if (msg.match(/bantu|help|bisa apa/)) {
+            return `🤖 Saya bisa membantu:<br>
+                • "Total penjualan hari ini"<br>
+                • "Stok menipis"<br>
+                • "Tambah produk [nama]"<br>
+                • "Cari produk [nama]"<br>
+                • "Buka shift"<br>
+                • "Tutup shift"`;
+        }
+
+        // Buka shift
+        if (msg.match(/buka shift|mulai shift/)) {
+            if (AppState.currentShift) {
+                return '⚠️ Shift sudah berjalan. Tutup shift terlebih dahulu.';
+            }
+            if (typeof ShiftModule !== 'undefined') {
+                Utils.openModal('shiftModal');
+                return 'Silakan isi form untuk membuka shift 📝';
+            }
+            return 'Module shift belum tersedia';
+        }
+
+        // Default
+        return '🤔 Maaf, saya belum mengerti. Ketik "bantuan" untuk melihat apa yang bisa saya lakukan.';
     }
-
-    if (q.includes('terlaris') || q.includes('paling laku') || q.includes('best seller')) {
-      return this._topProductReply();
-    }
-
-    if (q.includes('penjualan hari ini') || q.includes('omzet hari ini') || q.includes('total hari ini')) {
-      return this._todaySalesReply();
-    }
-
-    if (q.includes('jumlah produk') || q.includes('berapa produk')) {
-      return `Saat ini ada ${STATE.products.length} produk terdaftar di sistem.`;
-    }
-
-    if (q.includes('halo') || q.includes('hai') || q.includes('hi')) {
-      return 'Halo juga! Ada yang bisa saya bantu seputar warung Anda hari ini?';
-    }
-
-    if (q.includes('terima kasih') || q.includes('makasih')) {
-      return 'Sama-sama! Senang bisa membantu 😊';
-    }
-
-    return 'Maaf, saya belum memahami pertanyaan itu. Coba tanyakan tentang stok menipis, produk terlaris, atau penjualan hari ini.';
-  },
-
-  _lowStockReply() {
-    const lowStock = STATE.lowStockProducts;
-    if (lowStock.length === 0) return 'Semua stok produk dalam kondisi aman, tidak ada yang menipis. 👍';
-
-    const list = lowStock.slice(0, 5).map(p => `• ${p.name} (sisa ${p.stock})`).join('\n');
-    return `Ada ${lowStock.length} produk dengan stok menipis:\n${list}`;
-  },
-
-  _topProductReply() {
-    const items = []; // Idealnya diambil dari transaction_items, disederhanakan di sini
-    const data = Charts.buildTopProductsData(items);
-    if (data.length === 0) return 'Belum cukup data transaksi untuk menentukan produk terlaris.';
-    return `Produk terlaris saat ini: ${data.map(d => d.label).join(', ')}.`;
-  },
-
-  _todaySalesReply() {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const todayTransactions = STATE.transactions.filter(t => (t.created_at || '').slice(0, 10) === todayKey);
-    const total = todayTransactions.reduce((sum, t) => sum + (Number(t.total_amount) || 0), 0);
-
-    if (todayTransactions.length === 0) return 'Belum ada transaksi tercatat hari ini.';
-    return `Hari ini sudah ada ${todayTransactions.length} transaksi dengan total penjualan ${Utils.formatCurrency(total)}.`;
-  },
 };
+
+Object.freeze(AIModule);
+console.log('%c✅ AIModule loaded', 'color: #10b981;');
