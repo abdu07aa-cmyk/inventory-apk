@@ -1,14 +1,8 @@
-/**
- * WARUNGKITA PRO MAX - Main Application
- * Clean version tanpa double-init
- */
-
 const AppMain = {
     async init() {
-        console.log('%c🏪 WarungKita PRO MAX - Starting...', 'color: #3b82f6; font-size: 16px; font-weight: bold;');
+        console.log('WarungKita PRO MAX - Starting...');
         
         try {
-            // 1. Test Supabase connection
             let isConnected = false;
             try {
                 isConnected = await Promise.race([
@@ -19,46 +13,31 @@ const AppMain = {
                 isConnected = false;
             }
             
-            console.log(`%c${isConnected ? '✅ Supabase connected' : '⚠️ Offline mode'}`, 
-                `color: ${isConnected ? '#10b981' : '#f59e0b'};`);
+            console.log(isConnected ? 'Supabase connected' : 'Offline mode');
 
-            // 2. Init core modules (yang sudah auto-init dari script tags tidak perlu di-init lagi)
-            console.log('%c📦 Core modules loaded from script tags', 'color: #94a3b8;');
-            
-            // 3. Init features
-            console.log('%c🔧 Loading features...', 'color: #94a3b8;');
             this.initFeatures();
-
-            // 4. Setup navigation
-            console.log('%c🧭 Setting up navigation...', 'color: #94a3b8;');
             this.setupNavigation();
-
-            // 5. Setup keyboard shortcuts
             this.setupKeyboardShortcuts();
-
-            // 6. Hide loading screen
-            console.log('%c✨ Hiding loading screen...', 'color: #10b981;');
             this.hideLoadingScreen();
 
-            // 7. Welcome message
             setTimeout(() => {
-                const name = typeof AuthModule !== 'undefined' && AuthModule.currentUser 
+                const name = AuthModule && AuthModule.currentUser 
                     ? AuthModule.currentUser.name 
                     : 'User';
-                Utils.toast(`Selamat datang, ${name}! 👋`, 'success', 3000);
+                Utils.toast('Selamat datang, ' + name + '!', 'success', 3000);
             }, 500);
 
-            console.log('%c✅✅✅ APP READY! ✅✅✅', 'color: #10b981; font-size: 20px; font-weight: bold;');
+            console.log('APP READY!');
             
         } catch (error) {
-            console.error('%c❌ FATAL ERROR:', 'color: #ef4444; font-size: 16px;', error);
+            console.error('FATAL ERROR:', error);
             this.hideLoadingScreen();
-            Utils.toast(`Error: ${error.message}`, 'error', 5000);
+            Utils.toast('Error: ' + error.message, 'error', 5000);
         }
     },
 
     initFeatures() {
-        const features = [
+        var features = [
             'ShiftModule',
             'BarcodeModule', 
             'OfflineModule',
@@ -69,53 +48,51 @@ const AppMain = {
             'SplitPaymentModule'
         ];
 
-        features.forEach(name => {
-            const feature = window[name];
+        features.forEach(function(name) {
+            var feature = window[name];
             if (feature && typeof feature.init === 'function') {
                 try {
                     feature.init();
-                    console.log(`   ✅ ${name} initialized`);
+                    console.log('  ' + name + ' initialized');
                 } catch (e) {
-                    console.warn(`   ⚠️ ${name} failed:`, e.message);
+                    console.warn(name + ' failed:', e.message);
                 }
             }
         });
     },
 
     setupNavigation() {
-        // Nav items click
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const view = item.dataset.view;
-                if (view) this.switchView(view);
-            });
-        });
+        var navItems = document.querySelectorAll('.nav-item');
+        for (var i = 0; i < navItems.length; i++) {
+            navItems[i].addEventListener('click', (function(item) {
+                return function(e) {
+                    e.preventDefault();
+                    var view = item.dataset.view;
+                    if (view) AppMain.switchView(view);
+                };
+            })(navItems[i]));
+        }
 
-        // Mobile menu
-        const btnMenu = document.getElementById('btnMenuMobile');
+        var btnMenu = document.getElementById('btnMenuMobile');
         if (btnMenu) {
-            btnMenu.addEventListener('click', () => {
+            btnMenu.addEventListener('click', function() {
                 document.getElementById('sidebar').classList.toggle('active');
             });
         }
 
-        // Sidebar toggle
-        const btnToggle = document.getElementById('toggleSidebar');
+        var btnToggle = document.getElementById('toggleSidebar');
         if (btnToggle) {
-            btnToggle.addEventListener('click', () => {
+            btnToggle.addEventListener('click', function() {
                 document.getElementById('sidebar').classList.toggle('collapsed');
             });
         }
 
-        // Default view
         this.switchView('dashboard');
-        console.log('   ✅ Navigation ready');
+        console.log('Navigation ready');
     },
 
-    switchView(viewName) {
-        // Map view names (Indonesia ↔ English)
-        const viewMap = {
+    switchView: function(viewName) {
+        var viewMap = {
             'kasir': 'pos',
             'produk': 'products',
             'transaksi': 'transactions',
@@ -125,70 +102,67 @@ const AppMain = {
             'pengaturan': 'settings'
         };
         
-        const normalizedView = viewMap[viewName] || viewName;
+        var normalizedView = viewMap[viewName] || viewName;
         
-        // Update state
         if (typeof AppState !== 'undefined') {
             AppState.setView(normalizedView);
         }
 
-        // Update nav active
-        document.querySelectorAll('.nav-item').forEach(item => {
-            const itemView = viewMap[item.dataset.view] || item.dataset.view;
-            item.classList.toggle('active', itemView === normalizedView);
-        });
+        var navItems = document.querySelectorAll('.nav-item');
+        for (var i = 0; i < navItems.length; i++) {
+            var itemView = viewMap[navItems[i].dataset.view] || navItems[i].dataset.view;
+            navItems[i].classList.toggle('active', itemView === normalizedView);
+        }
 
-        // Show/hide views
-        document.querySelectorAll('.view').forEach(view => {
-            const isActive = view.id === `view-${viewName}` || view.id === `view-${normalizedView}`;
-            view.classList.toggle('active', isActive);
-            view.style.display = isActive ? 'block' : 'none';
-        });
+        var views = document.querySelectorAll('.view');
+        for (var i = 0; i < views.length; i++) {
+            var isActive = views[i].id === 'view-' + viewName || views[i].id === 'view-' + normalizedView;
+            views[i].classList.toggle('active', isActive);
+            views[i].style.display = isActive ? 'block' : 'none';
+        }
 
-        // Update page title
-        const titles = {
-            dashboard: 'Dashboard',
-            pos: 'Kasir (POS)',
-            kasir: 'Kasir (POS)',
-            products: 'Manajemen Produk',
-            produk: 'Manajemen Produk',
-            transactions: 'Riwayat Transaksi',
-            transaksi: 'Riwayat Transaksi',
-            stock: 'Manajemen Stok',
-            stok: 'Manajemen Stok',
-            customers: 'Pelanggan',
-            pelanggan: 'Pelanggan',
-            reports: 'Laporan',
-            laporan: 'Laporan',
-            shift: 'Shift Kasir',
-            settings: 'Pengaturan',
-            pengaturan: 'Pengaturan'
+        var titles = {
+            'dashboard': 'Dashboard',
+            'pos': 'Kasir (POS)',
+            'kasir': 'Kasir (POS)',
+            'products': 'Manajemen Produk',
+            'produk': 'Manajemen Produk',
+            'transactions': 'Riwayat Transaksi',
+            'transaksi': 'Riwayat Transaksi',
+            'stock': 'Manajemen Stok',
+            'stok': 'Manajemen Stok',
+            'customers': 'Pelanggan',
+            'pelanggan': 'Pelanggan',
+            'reports': 'Laporan',
+            'laporan': 'Laporan',
+            'shift': 'Shift Kasir',
+            'settings': 'Pengaturan',
+            'pengaturan': 'Pengaturan'
         };
         
-        const titleEl = document.getElementById('pageTitle');
+        var titleEl = document.getElementById('pageTitle');
         if (titleEl) {
             titleEl.textContent = titles[viewName] || titles[normalizedView] || 'Dashboard';
         }
 
-        // Close mobile sidebar
         if (window.innerWidth <= 768) {
-            document.getElementById('sidebar')?.classList.remove('active');
+            var sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.classList.remove('active');
         }
 
-        // View-specific logic
         this.onViewChange(normalizedView);
     },
 
-    onViewChange(viewName) {
+    onViewChange: function(viewName) {
         switch (viewName) {
             case 'dashboard':
-                if (typeof AppMain !== 'undefined') AppMain.refreshDashboard();
+                this.refreshDashboard();
                 break;
             case 'transactions':
-                if (typeof AppMain !== 'undefined') AppMain.loadTransactions();
+                this.loadTransactions();
                 break;
             case 'customers':
-                if (typeof AppMain !== 'undefined') AppMain.loadCustomers();
+                this.loadCustomers();
                 break;
             case 'pos':
                 if (typeof ProductsModule !== 'undefined') ProductsModule.renderProductsGrid();
@@ -199,23 +173,35 @@ const AppMain = {
         }
     },
 
-    async refreshDashboard() {
+    refreshDashboard: async function() {
         try {
-            const el = (id) => document.getElementById(id);
+            var todayTx = [];
+            if (typeof API !== 'undefined') {
+                try {
+                    todayTx = await API.transactions.getToday();
+                } catch (e) {
+                    todayTx = [];
+                }
+            }
             
-            // Get today's transactions
-            const todayTx = typeof API !== 'undefined' 
-                ? await API.transactions.getToday().catch(() => []) 
-                : [];
+            var totalRev = 0;
+            for (var i = 0; i < todayTx.length; i++) {
+                totalRev += todayTx[i].total_amount || 0;
+            }
             
-            const totalRev = todayTx.reduce((s, t) => s + (t.total_amount || 0), 0);
-            const products = typeof AppState !== 'undefined' ? AppState.products : [];
-            const lowStock = products.filter(p => p.stock <= 10).length;
+            var products = AppState ? AppState.products : [];
+            var lowStock = 0;
+            for (var i = 0; i < products.length; i++) {
+                if (products[i].stock <= 10) lowStock++;
+            }
 
-            if (el('statTransactions')) el('statTransactions').textContent = todayTx.length || 0;
-            if (el('statRevenue')) el('statRevenue').textContent = Utils?.formatCurrency(totalRev) || 'Rp 0';
-            if (el('statProductsSold')) el('statProductsSold').textContent = '0';
-            if (el('statLowStock')) el('statLowStock').textContent = lowStock;
+            var elTx = document.getElementById('statTransactions');
+            var elRev = document.getElementById('statRevenue');
+            var elLow = document.getElementById('statLowStock');
+            
+            if (elTx) elTx.textContent = todayTx.length;
+            if (elRev) elRev.textContent = Utils ? Utils.formatCurrency(totalRev) : 'Rp 0';
+            if (elLow) elLow.textContent = lowStock;
 
             this.renderRecentTransactions(todayTx.slice(0, 5));
         } catch (e) {
@@ -223,106 +209,115 @@ const AppMain = {
         }
     },
 
-    renderRecentTransactions(transactions) {
-        const tbody = document.getElementById('recentTransactionsBody');
+    renderRecentTransactions: function(transactions) {
+        var tbody = document.getElementById('recentTransactionsBody');
         if (!tbody) return;
 
         if (!transactions || transactions.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">
-                        <i class="fas fa-receipt" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
-                        Belum ada transaksi hari ini
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#94a3b8;">Belum ada transaksi hari ini</td></tr>';
             return;
         }
 
-        tbody.innerHTML = transactions.map(tx => `
-            <tr>
-                <td><code>${tx.transaction_code || tx.id || '-'}</code></td>
-                <td>${tx.customer_name || 'Umum'}</td>
-                <td><strong>${Utils?.formatCurrency(tx.total_amount) || 'Rp 0'}</strong></td>
-                <td><span class="badge badge-info">${tx.payment_method || '-'}</span></td>
-                <td><span class="badge badge-success">${tx.payment_status || '-'}</span></td>
-                <td>${Utils?.getRelativeTime(tx.created_at) || '-'}</td>
-            </tr>
-        `).join('');
+        var html = '';
+        for (var i = 0; i < transactions.length; i++) {
+            var tx = transactions[i];
+            html += '<tr>';
+            html += '<td><code>' + (tx.transaction_code || tx.id || '-') + '</code></td>';
+            html += '<td>' + (tx.customer_name || 'Umum') + '</td>';
+            html += '<td><strong>' + (Utils ? Utils.formatCurrency(tx.total_amount) : 'Rp 0') + '</strong></td>';
+            html += '<td><span class="badge badge-info">' + (tx.payment_method || '-') + '</span></td>';
+            html += '<td><span class="badge badge-success">' + (tx.payment_status || '-') + '</span></td>';
+            html += '<td>' + (Utils ? Utils.getRelativeTime(tx.created_at) : '-') + '</td>';
+            html += '</tr>';
+        }
+        tbody.innerHTML = html;
     },
 
-    async loadTransactions() {
-        const tbody = document.getElementById('transactionsTableBody');
+    loadTransactions: async function() {
+        var tbody = document.getElementById('transactionsTableBody');
         if (!tbody) return;
 
         try {
-            const txs = typeof API !== 'undefined' 
-                ? await API.transactions.getAll({ limit: 100 }).catch(() => []) 
-                : [];
+            var txs = [];
+            if (typeof API !== 'undefined') {
+                try {
+                    txs = await API.transactions.getAll({ limit: 100 });
+                } catch (e) {
+                    txs = [];
+                }
+            }
             
             if (!txs || txs.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" style="text-align: center; padding: 2rem;">
-                            Belum ada transaksi
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;">Belum ada transaksi</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = txs.map(tx => `
-                <tr>
-                    <td><code>${tx.transaction_code || tx.id}</code></td>
-                    <td>${Utils?.formatDateTime(tx.created_at) || '-'}</td>
-                    <td>${tx.customer_name || 'Umum'}</td>
-                    <td>-</td>
-                    <td><strong>${Utils?.formatCurrency(tx.total_amount) || 'Rp 0'}</strong></td>
-                    <td>${tx.payment_method || '-'}</td>
-                    <td><span class="badge badge-success">${tx.payment_status || '-'}</span></td>
-                    <td><button class="btn-icon-small"><i class="fas fa-eye"></i></button></td>
-                </tr>
-            `).join('');
+            var html = '';
+            for (var i = 0; i < txs.length; i++) {
+                var tx = txs[i];
+                html += '<tr>';
+                html += '<td><code>' + (tx.transaction_code || tx.id) + '</code></td>';
+                html += '<td>' + (Utils ? Utils.formatDateTime(tx.created_at) : '-') + '</td>';
+                html += '<td>' + (tx.customer_name || 'Umum') + '</td>';
+                html += '<td>-</td>';
+                html += '<td><strong>' + (Utils ? Utils.formatCurrency(tx.total_amount) : 'Rp 0') + '</strong></td>';
+                html += '<td>' + (tx.payment_method || '-') + '</td>';
+                html += '<td><span class="badge badge-success">' + (tx.payment_status || '-') + '</span></td>';
+                html += '<td><button class="btn-icon-small"><i class="fas fa-eye"></i></button></td>';
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
         } catch (e) {
             console.error('Load transactions failed:', e);
         }
     },
 
-    async loadCustomers() {
-        const tbody = document.getElementById('customersTableBody');
+    loadCustomers: async function() {
+        var tbody = document.getElementById('customersTableBody');
         if (!tbody) return;
 
         try {
-            const customers = typeof API !== 'undefined' 
-                ? await API.customers.getAll().catch(() => []) 
-                : [];
+            var customers = [];
+            if (typeof API !== 'undefined') {
+                try {
+                    customers = await API.customers.getAll();
+                } catch (e) {
+                    customers = [];
+                }
+            }
             
             if (typeof AppState !== 'undefined') AppState.setCustomers(customers);
 
-            tbody.innerHTML = customers.length === 0 
-                ? `<tr><td colspan="6" style="text-align:center;padding:2rem;">Belum ada pelanggan</td></tr>`
-                : customers.map(c => `
-                    <tr>
-                        <td><strong>${c.name}</strong></td>
-                        <td>${c.phone || '-'}</td>
-                        <td>${c.total_transactions || 0}</td>
-                        <td>${Utils?.formatCurrency(c.total_spent || 0) || 'Rp 0'}</td>
-                        <td><span class="badge badge-info">${c.points || 0} pts</span></td>
-                        <td><button class="btn-icon-small"><i class="fas fa-edit"></i></button></td>
-                    </tr>
-                `).join('');
+            if (customers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Belum ada pelanggan</td></tr>';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < customers.length; i++) {
+                var c = customers[i];
+                html += '<tr>';
+                html += '<td><strong>' + c.name + '</strong></td>';
+                html += '<td>' + (c.phone || '-') + '</td>';
+                html += '<td>' + (c.total_transactions || 0) + '</td>';
+                html += '<td>' + (Utils ? Utils.formatCurrency(c.total_spent || 0) : 'Rp 0') + '</td>';
+                html += '<td><span class="badge badge-info">' + (c.points || 0) + ' pts</span></td>';
+                html += '<td><button class="btn-icon-small"><i class="fas fa-edit"></i></button></td>';
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
         } catch (e) {
             console.error('Load customers failed:', e);
         }
     },
 
-    hideLoadingScreen() {
-        const loading = document.getElementById('loadingScreen');
-        const app = document.getElementById('app');
+    hideLoadingScreen: function() {
+        var loading = document.getElementById('loadingScreen');
+        var app = document.getElementById('app');
         
         if (loading) {
             loading.classList.add('fade-out');
-            setTimeout(() => {
+            setTimeout(function() {
                 loading.style.display = 'none';
             }, 500);
         }
@@ -332,40 +327,37 @@ const AppMain = {
             app.style.opacity = '1';
         }
         
-        console.log('   ✅ Loading screen hidden');
+        console.log('Loading screen hidden');
     },
 
-    setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
+    setupKeyboardShortcuts: function() {
+        document.addEventListener('keydown', function(e) {
             if (e.target.matches('input, textarea, select')) return;
             
-            // Ctrl+K: Search
             if (e.ctrlKey && e.key === 'k') {
                 e.preventDefault();
-                document.getElementById('globalSearch')?.focus();
+                var search = document.getElementById('globalSearch');
+                if (search) search.focus();
             }
             
-            // Ctrl+N: New product
             if (e.ctrlKey && e.key === 'n') {
                 e.preventDefault();
                 if (typeof ProductsModule !== 'undefined') ProductsModule.openNewModal();
             }
             
-            // Ctrl+D: Toggle theme
             if (e.ctrlKey && e.key === 'd') {
                 e.preventDefault();
                 if (typeof AppState !== 'undefined') AppState.toggleTheme();
             }
             
-            // F9: Payment
             if (e.key === 'F9') {
                 e.preventDefault();
                 if (typeof PaymentModule !== 'undefined') PaymentModule.openPaymentModal();
             }
             
-            // Escape: Clear/close
             if (e.key === 'Escape') {
-                if (document.querySelector('.modal.active')) {
+                var modal = document.querySelector('.modal.active');
+                if (modal) {
                     if (typeof Utils !== 'undefined') Utils.closeAllModals();
                 } else if (typeof AppState !== 'undefined' && AppState.currentView === 'pos') {
                     if (typeof CartModule !== 'undefined') CartModule.clearCart();
@@ -375,11 +367,12 @@ const AppMain = {
     }
 };
 
-// Bootstrap when DOM ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => AppMain.init());
+    document.addEventListener('DOMContentLoaded', function() {
+        AppMain.init();
+    });
 } else {
     AppMain.init();
 }
 
-console.log('%c✅ AppMain loaded', 'color: #10b981;');
+console.log('AppMain loaded');
