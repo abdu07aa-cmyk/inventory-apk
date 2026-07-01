@@ -1,290 +1,72 @@
-/* =====================================================
-   WARUNGKITA PRO MAX — MODALS.CSS
-   Styling untuk overlay modal dan seluruh varian dialog
-   (tambah produk, pembayaran, struk, dsb). Konten modal
-   dirender secara dinamis lewat JS ke dalam #modalRoot,
-   tapi class di sini menstandarkan tampilannya.
-   ===================================================== */
-
-.modal-root {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-  display: none;
-}
-
-.modal-root.is-open {
-  display: block;
-}
-
-.modal-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-5);
-}
+/* ============================================
+   WARUNGKITA PRO MAX - Modals
+   ============================================ */
 
 .modal {
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-2xl);
-  display: flex;
-  flex-direction: column;
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
 }
 
-.modal-sm { max-width: 380px; }
-.modal-md { max-width: 480px; }
-.modal-lg { max-width: 680px; }
-.modal-xl { max-width: 880px; }
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+}
+
+.modal-content.modal-lg {
+    max-width: 800px;
+}
 
 .modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
-  font-size: var(--font-size-lg);
+    margin: 0;
 }
 
-.modal-close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  background: var(--color-surface-alt);
+.btn-close {
+    background: none;
+    border: none;
+    font-size: var(--font-size-lg);
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: var(--spacing-xs);
 }
-.modal-close-btn:hover {
-  background: var(--color-border);
-  color: var(--color-text-primary);
+
+.btn-close:hover {
+    color: var(--text-primary);
 }
 
 .modal-body {
-  padding: var(--space-6);
-  flex: 1;
+    padding: var(--spacing-lg);
 }
 
 .modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding: var(--space-5) var(--space-6);
-  border-top: 1px solid var(--color-border);
-}
-
-/* ============== MODAL: PEMBAYARAN ============== */
-.payment-method-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
-
-.payment-method-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast);
-}
-
-.payment-method-option i {
-  font-size: var(--font-size-xl);
-  color: var(--color-primary);
-}
-
-.payment-method-option.is-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-50);
-  color: var(--color-primary);
-}
-
-.qris-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-6) 0;
-}
-
-#qrisCanvas {
-  padding: var(--space-3);
-  background: #fff;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-/* ============== MODAL: STRUK / RECEIPT ============== */
-.receipt {
-  font-family: 'Courier New', monospace;
-  font-size: var(--font-size-sm);
-  background: var(--color-surface-alt);
-  border-radius: var(--radius-sm);
-  padding: var(--space-5);
-}
-
-.receipt-header {
-  text-align: center;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px dashed var(--color-border);
-}
-
-.receipt-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-
-.receipt-divider {
-  border-top: 1px dashed var(--color-border);
-  margin: var(--space-3) 0;
-}
-
-.receipt-total-row {
-  display: flex;
-  justify-content: space-between;
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-base);
-}
-
-/* ============== MODAL: SPLIT PAYMENT ============== */
-.split-payment-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--space-3);
-}
-
-.split-payment-row select {
-  flex-shrink: 0;
-  width: auto;
-}
-
-/* ============== MODAL: AI ASSISTANT ============== */
-.ai-chat-window {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  max-height: 360px;
-  overflow-y: auto;
-  margin-bottom: var(--space-4);
-}
-
-.ai-message {
-  max-width: 80%;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-relaxed);
-}
-
-.ai-message.is-bot {
-  align-self: flex-start;
-  background: var(--color-surface-alt);
-  border-bottom-left-radius: var(--radius-xs);
-}
-
-.ai-message.is-user {
-  align-self: flex-end;
-  background: var(--gradient-purple-blue);
-  color: #fff;
-  border-bottom-right-radius: var(--radius-xs);
-}
-
-.ai-input-row {
-  display: flex;
-  gap: var(--space-2);
-}
-/* ============== ICON SELECTOR (Untuk Tambah Produk) ============== */
-.icon-selector-label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-3);
-  display: block;
-}
-
-.icon-selector-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-  max-height: 220px;
-  overflow-y: auto;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-alt);
-}
-
-.icon-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-3) var(--space-2);
-  border: 2px solid transparent;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  background: var(--color-surface);
-}
-
-.icon-option:hover {
-  border-color: var(--color-primary-light);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-}
-
-.icon-option.is-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-50);
-}
-
-.icon-option svg {
-  width: 32px;
-  height: 32px;
-  stroke: var(--color-text-primary);
-  margin-bottom: 6px;
-  transition: stroke var(--transition-fast);
-}
-
-.icon-option.is-selected svg {
-  stroke: var(--color-primary);
-}
-
-.icon-option span {
-  font-size: 10px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  text-align: center;
-  line-height: 1.2;
-}
-
-.icon-option.is-selected span {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-bold);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
 }
