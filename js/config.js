@@ -13,7 +13,7 @@ const CONFIG = {
   SUPABASE_URL: localStorage.getItem('wk_supabase_url') || 'https://marelgsluzshkwxwcjod.supabase.co',
 
   // Anon/public key Supabase. JANGAN pernah commit service_role key di sini.
-  SUPABASE_ANON_KEY: localStorage.getItem('wk_supabase_key') || '',
+  SUPABASE_ANON_KEY: localStorage.getItem('wk_supabase_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcmVsZ3NsdXpzaGt3eHdjam9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MDg3MzIsImV4cCI6MjA5ODI4NDczMn0.73CLxhbxhO28UplJU8C1-mtNawlsMegVsORXY7PPzlg',
 
   // Endpoint REST Supabase (PostgREST). Dipakai oleh js/api.js
   get SUPABASE_REST_URL() {
