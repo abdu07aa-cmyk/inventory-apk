@@ -407,11 +407,12 @@
 }
 
 /* ============== FLOATING CART BUTTON (Mobile POS) ============== */
+/* ============== FLOATING CART BUTTON (Mobile POS) ============== */
 .cart-fab {
-  display: none; /* tampil di ≤ 860px via responsive.css */
-  position: fixed;
-  bottom: 76px; /* di atas bottom nav */
-  right: var(--space-4);
+display: none; /* tampil di ≤ 860px via responsive.css */
+position: fixed;
+bottom: 76px; /* di atas bottom nav */
+right: var(--space-4);
   z-index: 190;
   background: var(--gradient-purple-blue);
   color: #fff;
