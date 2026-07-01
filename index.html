@@ -1,485 +1,470 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="WarungKita PRO MAX — Sistem Point of Sale (POS) modern untuk warung & toko">
-  <meta name="theme-color" content="#3b82f6">
-  <title>WarungKita PRO MAX | Enterprise POS System</title>
-
-  <!-- ===== FAVICON ===== -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
-
-  <!-- ===== GOOGLE FONTS: INTER ===== -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-  <!-- ===== FONT AWESOME 6.4.0 ===== -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- ===== CSS MODULAR (urutan penting: variables harus paling awal) ===== -->
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/layout.css">
-  <link rel="stylesheet" href="css/modals.css">
-  <link rel="stylesheet" href="css/animations.css">
-  <link rel="stylesheet" href="css/responsive.css">
-  <link rel="stylesheet" href="css/print.css" media="print">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WarungKita PRO MAX</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; }
+        
+        .app { display: flex; min-height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        .logo i { font-size: 32px; color: #3b82f6; }
+        .logo h1 { font-size: 24px; color: #1e293b; }
+        .logo span { font-size: 12px; color: #3b82f6; display: block; }
+        
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 8px; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover { background: #e2e8f0; }
+        .nav-link.active { background: #3b82f6; color: white; }
+        .nav-link i { width: 20px; }
+        
+        /* Main Content */
+        .main {
+            flex: 1;
+            margin-left: 260px;
+            padding: 30px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .header h2 { font-size: 28px; color: #1e293b; }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+        
+        .stat-icon.blue { background: #dbeafe; }
+        .stat-icon.green { background: #d1fae5; }
+        .stat-icon.orange { background: #fed7aa; }
+        .stat-icon.red { background: #fee2e2; }
+        
+        .stat-info h3 { font-size: 28px; color: #1e293b; margin-bottom: 4px; }
+        .stat-info p { color: #64748b; font-size: 14px; }
+        
+        /* Content Card */
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .card h3 { margin-bottom: 20px; color: #1e293b; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+        
+        .empty-state i { font-size: 64px; margin-bottom: 16px; display: block; }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.show { display: flex; }
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.error { border-left: 4px solid #ef4444; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); }
+            to { transform: translateX(0); }
+        }
+        
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading.hide { display: none; }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* View Sections */
+        .view { display: none; }
+        .view.active { display: block; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.show { transform: translateX(0); }
+            .main { margin-left: 0; }
+        }
+    </style>
 </head>
-<body data-theme="light">
-
-  <!-- ===================================================== -->
-  <!-- LOADING SCREEN                                          -->
-  <!-- ===================================================== -->
-  <div id="loadingScreen" class="loading-screen">
-    <div class="loading-logo">🛒</div>
-    <div class="loading-text">WarungKita PRO MAX</div>
-    <div class="loading-bar"><span></span></div>
-  </div>
-
-  <!-- ===================================================== -->
-  <!-- APP SHELL                                               -->
-  <!-- ===================================================== -->
-  <div id="app" class="app-shell">
-
-    <!-- ============== SIDEBAR ============== -->
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">🛒</span>
-        <div class="sidebar-title">
-          <h1>WarungKita</h1>
-          <span>PRO MAX</span>
-        </div>
-        <button id="sidebarToggle" class="icon-btn sidebar-toggle" aria-label="Tutup sidebar">
-          <i class="fa-solid fa-bars"></i>
-        </button>
-      </div>
-
-      <nav class="sidebar-nav" id="sidebarNav">
-        <button class="nav-item is-active" data-view="dashboard">
-          <i class="fa-solid fa-chart-line"></i><span>Dashboard</span>
-        </button>
-        <button class="nav-item" data-view="kasir">
-          <i class="fa-solid fa-cash-register"></i><span>Kasir</span>
-        </button>
-        <button class="nav-item" data-view="produk">
-          <i class="fa-solid fa-boxes-stacked"></i><span>Produk</span>
-        </button>
-        <button class="nav-item" data-view="transaksi">
-          <i class="fa-solid fa-receipt"></i><span>Transaksi</span>
-        </button>
-        <button class="nav-item" data-view="stok">
-          <i class="fa-solid fa-warehouse"></i><span>Stok Barang</span>
-        </button>
-        <button class="nav-item" data-view="pelanggan">
-          <i class="fa-solid fa-users"></i><span>Pelanggan</span>
-        </button>
-        <button class="nav-item" data-view="shift">
-          <i class="fa-solid fa-clock"></i><span>Shift Kasir</span>
-        </button>
-        <button class="nav-item" data-view="laporan">
-          <i class="fa-solid fa-file-invoice-dollar"></i><span>Laporan</span>
-        </button>
-        <button class="nav-item" data-view="pengaturan">
-          <i class="fa-solid fa-gear"></i><span>Pengaturan</span>
-        </button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button id="darkModeToggle" class="icon-btn" aria-label="Ganti tema gelap/terang">
-          <i class="fa-solid fa-moon"></i>
-        </button>
-        <div class="sidebar-user">
-          <div class="sidebar-user-avatar">K</div>
-          <div class="sidebar-user-info">
-            <strong id="cashierName">Kasir</strong>
-            <span id="shiftStatusLabel">Shift belum dibuka</span>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- ============== MAIN CONTENT ============== -->
-    <div class="main-area">
-
-      <!-- ============== TOPBAR ============== -->
-      <header class="topbar">
-        <button id="mobileMenuBtn" class="icon-btn topbar-menu-btn" aria-label="Buka menu">
-          <i class="fa-solid fa-bars"></i>
-        </button>
-
-        <div class="topbar-search">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="globalSearch" placeholder="Cari produk, transaksi, pelanggan... (Ctrl+K)">
-        </div>
-
-        <div class="topbar-actions">
-          <button class="icon-btn" id="notifBtn" aria-label="Notifikasi">
-            <i class="fa-solid fa-bell"></i>
-            <span class="badge-dot" id="notifBadge" hidden></span>
-          </button>
-          <button class="icon-btn" id="aiAssistantBtn" aria-label="AI Assistant">
-            <i class="fa-solid fa-robot"></i>
-          </button>
-          <button class="btn btn-primary" id="newSaleBtn">
-            <i class="fa-solid fa-plus"></i><span>Transaksi Baru</span>
-          </button>
-        </div>
-      </header>
-
-      <!-- ============== VIEW CONTAINER ============== -->
-      <main class="view-container" id="viewContainer">
-
-        <!-- ====== VIEW: DASHBOARD ====== -->
-        <section class="view" id="view-dashboard" data-view="dashboard">
-          <div class="view-header">
-            <div>
-              <h2>Dashboard</h2>
-              <p class="view-subtitle">Ringkasan performa toko Anda hari ini</p>
-            </div>
-            <div class="view-header-actions">
-              <select id="dashboardRangeSelect" class="select-field">
-                <option value="today">Hari ini</option>
-                <option value="week">7 Hari Terakhir</option>
-                <option value="month">Bulan Ini</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="stat-grid" id="statGrid">
-            <!-- Stat cards di-render via js/modules/products.js & main.js -->
-          </div>
-
-          <div class="dashboard-grid">
-            <div class="card chart-card">
-              <div class="card-header">
-                <h3>Tren Penjualan</h3>
-              </div>
-              <canvas id="salesTrendChart"></canvas>
-            </div>
-            <div class="card chart-card">
-              <div class="card-header">
-                <h3>Produk Terlaris</h3>
-              </div>
-              <canvas id="topProductsChart"></canvas>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <h3>Transaksi Terbaru</h3>
-              <button class="link-btn" data-view-link="transaksi">Lihat semua</button>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table" id="recentTransactionsTable">
-                <thead>
-                  <tr>
-                    <th>ID</th><th>Waktu</th><th>Pelanggan</th><th>Metode</th><th>Total</th><th>Status</th>
-                  </tr>
-                </thead>
-                <tbody><!-- diisi dinamis --></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ====== VIEW: KASIR (POS) ====== -->
-        <section class="view" id="view-kasir" data-view="kasir" hidden>
-          <div class="pos-layout">
-
-            <div class="pos-products">
-              <div class="pos-products-toolbar">
-                <div class="category-pills" id="categoryPills">
-                  <button class="pill is-active" data-category="all">Semua</button>
-                </div>
-                <button class="icon-btn" id="scanBarcodeBtn" aria-label="Pindai barcode">
-                  <i class="fa-solid fa-barcode"></i>
-                </button>
-              </div>
-              <div class="product-grid" id="productGrid">
-                <!-- product cards diisi via js/modules/products.js -->
-              </div>
-            </div>
-
-            <aside class="pos-cart">
-              <div class="pos-cart-header">
-                <h3><i class="fa-solid fa-cart-shopping"></i> Keranjang</h3>
-                <button class="link-btn-danger" id="clearCartBtn">Kosongkan</button>
-              </div>
-
-              <div class="pos-cart-items" id="cartItems">
-                <div class="cart-empty-state">
-                  <i class="fa-solid fa-cart-shopping"></i>
-                  <p>Keranjang masih kosong</p>
-                </div>
-              </div>
-
-              <div class="pos-cart-summary">
-                <div class="summary-row">
-                  <span>Subtotal</span><span id="cartSubtotal">Rp 0</span>
-                </div>
-                <div class="summary-row">
-                  <span>Diskon</span><span id="cartDiscount">Rp 0</span>
-                </div>
-                <div class="summary-row summary-row-total">
-                  <span>Total</span><span id="cartTotal">Rp 0</span>
-                </div>
-
-                <div class="cart-promo">
-                  <input type="text" id="discountCodeInput" placeholder="Kode diskon (mis. WARUNG10)">
-                  <button class="btn btn-ghost" id="applyDiscountBtn">Terapkan</button>
-                </div>
-
-                <div class="cart-action-row">
-                  <button class="btn btn-secondary" id="holdCartBtn">
-                    <i class="fa-solid fa-pause"></i> Tahan
-                  </button>
-                  <button class="btn btn-primary btn-block" id="payBtn">
-                    <i class="fa-solid fa-credit-card"></i> Bayar (F9)
-                  </button>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </section>
-
-        <!-- ====== VIEW: PRODUK ====== -->
-        <section class="view" id="view-produk" data-view="produk" hidden>
-          <div class="view-header">
-            <div>
-              <h2>Manajemen Produk</h2>
-              <p class="view-subtitle">Kelola daftar produk, harga, dan stok</p>
-            </div>
-            <div class="view-header-actions">
-              <button class="btn btn-secondary" id="exportProductsBtn">
-                <i class="fa-solid fa-file-export"></i> Ekspor
-              </button>
-              <button class="btn btn-primary" id="addProductBtn">
-                <i class="fa-solid fa-plus"></i> Tambah Produk (Ctrl+N)
-              </button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="table-wrap">
-              <table class="data-table" id="productsTable">
-                <thead>
-                  <tr>
-                    <th></th><th>Nama</th><th>Kategori</th><th>Harga</th><th>Stok</th><th>Barcode</th><th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody><!-- diisi dinamis --></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ====== VIEW: TRANSAKSI ====== -->
-        <section class="view" id="view-transaksi" data-view="transaksi" hidden>
-          <div class="view-header">
-            <div>
-              <h2>Riwayat Transaksi</h2>
-              <p class="view-subtitle">Semua transaksi penjualan tercatat di sini</p>
-            </div>
-            <div class="view-header-actions">
-              <button class="btn btn-secondary" id="exportTransactionsBtn">
-                <i class="fa-solid fa-file-export"></i> Ekspor
-              </button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="table-wrap">
-              <table class="data-table" id="transactionsTable">
-                <thead>
-                  <tr>
-                    <th>ID</th><th>Waktu</th><th>Kasir</th><th>Pelanggan</th><th>Item</th><th>Metode</th><th>Total</th><th>Status</th><th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody><!-- diisi dinamis --></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ====== VIEW: STOK ====== -->
-        <section class="view" id="view-stok" data-view="stok" hidden>
-          <div class="view-header">
-            <div>
-              <h2>Stok Barang</h2>
-              <p class="view-subtitle">Pantau dan kelola barang masuk/keluar</p>
-            </div>
-            <div class="view-header-actions">
-              <button class="btn btn-primary" id="stockInBtn">
-                <i class="fa-solid fa-dolly"></i> Barang Masuk
-              </button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="table-wrap">
-              <table class="data-table" id="stockTable">
-                <thead>
-                  <tr><th>Produk</th><th>Stok Saat Ini</th><th>Status</th><th>Aksi</th></tr>
-                </thead>
-                <tbody><!-- diisi dinamis --></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ====== VIEW: PELANGGAN ====== -->
-        <section class="view" id="view-pelanggan" data-view="pelanggan" hidden>
-          <div class="view-header">
-            <div>
-              <h2>Pelanggan</h2>
-              <p class="view-subtitle">Kelola data dan poin loyalitas pelanggan</p>
-            </div>
-            <div class="view-header-actions">
-              <button class="btn btn-primary" id="addCustomerBtn">
-                <i class="fa-solid fa-user-plus"></i> Tambah Pelanggan
-              </button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="table-wrap">
-              <table class="data-table" id="customersTable">
-                <thead>
-                  <tr><th>Nama</th><th>Telepon</th><th>Poin</th><th>Bergabung</th><th>Aksi</th></tr>
-                </thead>
-                <tbody><!-- diisi dinamis --></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ====== VIEW: SHIFT ====== -->
-        <section class="view" id="view-shift" data-view="shift" hidden>
-          <div class="view-header">
-            <div>
-              <h2>Manajemen Shift Kasir</h2>
-              <p class="view-subtitle">Buka dan tutup shift untuk rekonsiliasi kas</p>
-            </div>
-          </div>
-          <div class="card" id="shiftCard">
-            <!-- diisi dinamis via js/features/shift.js -->
-          </div>
-        </section>
-
-        <!-- ====== VIEW: LAPORAN ====== -->
-        <section class="view" id="view-laporan" data-view="laporan" hidden>
-          <div class="view-header">
-            <div>
-              <h2>Laporan Laba/Rugi</h2>
-              <p class="view-subtitle">Analisis HPP, margin, dan profitabilitas</p>
-            </div>
-          </div>
-          <div class="stat-grid" id="reportStatGrid"></div>
-          <div class="card chart-card">
-            <canvas id="profitLossChart"></canvas>
-          </div>
-        </section>
-
-        <!-- ====== VIEW: PENGATURAN ====== -->
-        <section class="view" id="view-pengaturan" data-view="pengaturan" hidden>
-          <div class="view-header">
-            <div>
-              <h2>Pengaturan</h2>
-              <p class="view-subtitle">Konfigurasi toko, database, dan preferensi aplikasi</p>
-            </div>
-          </div>
-          <div class="card">
-            <h3>Koneksi Database (Supabase)</h3>
-            <div class="form-grid">
-              <label class="form-field">
-                <span>Supabase URL</span>
-                <input type="text" id="settingSupabaseUrl" placeholder="https://xxxx.supabase.co">
-              </label>
-              <label class="form-field">
-                <span>Supabase Anon Key</span>
-                <input type="password" id="settingSupabaseKey" placeholder="••••••••••••">
-              </label>
-            </div>
-            <button class="btn btn-primary" id="saveSettingsBtn">Simpan Pengaturan</button>
-          </div>
-        </section>
-
-      </main>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
     </div>
-  </div>
 
-  <!-- ===================================================== -->
-  <!-- MODALS (struktur kosong, diisi/dikontrol via JS)        -->
-  <!-- ===================================================== -->
-  <div id="modalRoot" class="modal-root" aria-hidden="true"></div>
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Success!</span>
+    </div>
 
-  <!-- ===================================================== -->
-  <!-- TOAST CONTAINER ===================================== -->
-  <!-- ========== BOTTOM NAV (Mobile Only) ========== -->
-  <nav class="bottom-nav" id="bottomNav">
-    <button class="bottom-nav-item is-active" data-view="dashboard">
-      <i class="fa-solid fa-chart-line"></i><span>Dashboard</span>
-    </button>
-    <button class="bottom-nav-item" data-view="kasir">
-      <i class="fa-solid fa-cash-register"></i><span>Kasir</span>
-    </button>
-    <button class="bottom-nav-item" data-view="produk">
-      <i class="fa-solid fa-boxes-stacked"></i><span>Produk</span>
-    </button>
-    <button class="bottom-nav-item" data-view="transaksi">
-      <i class="fa-solid fa-receipt"></i><span>Transaksi</span>
-    </button>
-    <button class="bottom-nav-item" data-view="pengaturan">
-      <i class="fa-solid fa-gear"></i><span>Lainnya</span>
-    </button>
-  </nav>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-shopping-cart"></i>
+                <div>
+                    <h1>WarungKita</h1>
+                    <span>PRO MAX</span>
+                </div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <button class="nav-link active" onclick="switchView('dashboard')">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchView('kasir')">
+                        <i class="fas fa-cash-register"></i>
+                        <span>Kasir</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchView('produk')">
+                        <i class="fas fa-box"></i>
+                        <span>Produk</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchView('transaksi')">
+                        <i class="fas fa-receipt"></i>
+                        <span>Transaksi</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchView('stok')">
+                        <i class="fas fa-warehouse"></i>
+                        <span>Stok Barang</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchView('pelanggan')">
+                        <i class="fas fa-users"></i>
+                        <span>Pelanggan</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchView('shift')">
+                        <i class="fas fa-clock"></i>
+                        <span>Shift Kasir</span>
+                    </button>
+                </li>
+            </ul>
+        </aside>
 
-  <!-- ========== FLOATING CART BUTTON (Mobile POS) ========== -->
-  <button class="cart-fab" id="cartFab" aria-label="Lihat keranjang">
-    <i class="fa-solid fa-cart-shopping"></i>
-    <span>Keranjang</span>
-    <span class="cart-fab-badge" id="cartFabBadge">0</span>
-  </button>
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Dashboard View -->
+            <div class="view active" id="view-dashboard">
+                <div class="header">
+                    <h2>Dashboard</h2>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fas fa-shopping-cart"></i></div>
+                        <div class="stat-info">
+                            <h3 id="statTransaksi">0</h3>
+                            <p>Transaksi Hari Ini</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
+                        <div class="stat-info">
+                            <h3 id="statPendapatan">Rp 0</h3>
+                            <p>Pendapatan</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange"><i class="fas fa-box"></i></div>
+                        <div class="stat-info">
+                            <h3 id="statProduk">0</h3>
+                            <p>Total Produk</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <h3 id="statStok">0</h3>
+                            <p>Stok Menipis</p>
+                        </div>
+                    </div>
+                </div>
 
-  <!-- ========== CART BACKDROP (Mobile) ========== -->
-  <div class="cart-backdrop" id="cartBackdrop"></div>
+                <div class="card">
+                    <h3>Selamat Datang di WarungKita PRO MAX! 👋</h3>
+                    <p>Sistem Point of Sale modern untuk warung dan toko Anda.</p>
+                    <br>
+                    <button class="btn btn-primary" onclick="switchView('kasir')">
+                        <i class="fas fa-cash-register"></i> Buka Kasir
+                    </button>
+                </div>
+            </div>
 
-  <!-- ========== SIDEBAR BACKDROP (Mobile) ========== -->
-  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+            <!-- Other Views -->
+            <div class="view" id="view-kasir">
+                <div class="header">
+                    <h2>Kasir (POS)</h2>
+                </div>
+                <div class="card">
+                    <div class="empty-state">
+                        <i class="fas fa-cash-register"></i>
+                        <h3>Fitur Kasir</h3>
+                        <p>Silakan pilih produk untuk memulai transaksi</p>
+                    </div>
+                </div>
+            </div>
 
-  <div id="toastContainer" class="toast-container"></div>
+            <div class="view" id="view-produk">
+                <div class="header">
+                    <h2>Manajemen Produk</h2>
+                </div>
+                <div class="card">
+                    <div class="empty-state">
+                        <i class="fas fa-box"></i>
+                        <h3>Belum Ada Produk</h3>
+                        <button class="btn btn-primary" onclick="showToast('Fitur tambah produk segera hadir')">
+                            <i class="fas fa-plus"></i> Tambah Produk
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-  <!-- ===================================================== -->
-  <!-- LIBRARIES (CDN) ====================================== -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+            <div class="view" id="view-transaksi">
+                <div class="header">
+                    <h2>Riwayat Transaksi</h2>
+                </div>
+                <div class="card">
+                    <div class="empty-state">
+                        <i class="fas fa-receipt"></i>
+                        <h3>Belum Ada Transaksi</h3>
+                    </div>
+                </div>
+            </div>
 
-  <!-- ===================================================== -->
-  <!-- APP SCRIPTS (urutan dependensi penting)               -->
-  <!-- ===================================================== -->
-  <script src="js/config.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/charts.js"></script>
+            <div class="view" id="view-stok">
+                <div class="header">
+                    <h2>Stok Barang</h2>
+                </div>
+                <div class="card">
+                    <div class="empty-state">
+                        <i class="fas fa-warehouse"></i>
+                        <h3>Manajemen Stok</h3>
+                    </div>
+                </div>
+            </div>
 
-  <script src="js/modules/products.js"></script>
-  <script src="js/modules/cart.js"></script>
-  <script src="js/modules/payment.js"></script>
-  <script src="js/modules/stock.js"></script>
-  <script src="js/modules/ai.js"></script>
-  <script src="js/modules/auth.js"></script>
+            <div class="view" id="view-pelanggan">
+                <div class="header">
+                    <h2>Pelanggan</h2>
+                </div>
+                <div class="card">
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>Manajemen Pelanggan</h3>
+                    </div>
+                </div>
+            </div>
 
-  <script src="js/features/export.js"></script>
-  <script src="js/features/offline.js"></script>
-  <script src="js/features/barcode.js"></script>
-  <script src="js/features/hold-cart.js"></script>
-  <script src="js/features/notifications.js"></script>
-  <script src="js/features/shift.js"></script>
-  <script src="js/features/split-payment.js"></script>
-  <script src="js/features/returns.js"></script>
+            <div class="view" id="view-shift">
+                <div class="header">
+                    <h2>Shift Kasir</h2>
+                </div>
+                <div class="card">
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <h3>Shift Belum Dibuka</h3>
+                        <button class="btn btn-primary" onclick="showToast('Fitur shift segera hadir')">
+                            <i class="fas fa-play"></i> Buka Shift
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-  <script src="js/emoji-picker.js"></script>
-  <script src="js/events.js"></script>
-  <script src="js/main.js"></script>
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/modules/products.js"></script>
+    <script src="js/modules/cart.js"></script>
+    <script src="js/modules/payment.js"></script>
+    <script src="js/modules/stock.js"></script>
+    <script src="js/modules/ai.js"></script>
+    <script src="js/modules/auth.js"></script>
+    <script src="js/features/shift.js"></script>
+    <script src="js/features/hold-cart.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        // Simple view switcher
+        function switchView(viewName) {
+            // Update nav
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.closest('.nav-link').classList.add('active');
+            
+            // Update view
+            document.querySelectorAll('.view').forEach(view => {
+                view.classList.remove('active');
+            });
+            document.getElementById('view-' + viewName).classList.add('active');
+            
+            // Update title
+            const titles = {
+                'dashboard': 'Dashboard',
+                'kasir': 'Kasir (POS)',
+                'produk': 'Manajemen Produk',
+                'transaksi': 'Riwayat Transaksi',
+                'stok': 'Stok Barang',
+                'pelanggan': 'Pelanggan',
+                'shift': 'Shift Kasir'
+            };
+            document.querySelector('.header h2').textContent = titles[viewName];
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toast.className = 'toast show ' + type;
+            toastMessage.textContent = message;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Hide loading
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hide');
+                showToast('Aplikasi berhasil dimuat!');
+            }, 500);
+        });
+    </script>
 </body>
 </html>
