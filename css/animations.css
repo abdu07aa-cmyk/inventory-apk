@@ -1,0 +1,37 @@
+/* =====================================================
+WARUNGKITA PRO MAX — ANIMATIONS.CSS
+Keyframes dan utilitas animasi global.
+===================================================== */
+
+/* Fade In */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Slide Up (untuk modal/toast) */
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Pulse (untuk loading atau notifikasi) */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Loading bar bergerak */
+@keyframes loadingSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+.loading-bar span {
+  animation: loadingSlide 1.5s infinite ease-in-out;
+}
+
+/* Terapkan animasi ke elemen spesifik */
+.modal-overlay { animation: fadeIn 0.2s ease-out; }
+.modal { animation: slideUp 0.3s ease-out; }
+.toast { animation: slideUp 0.3s ease-out; }
