@@ -1,120 +1,82 @@
-/* =====================================================
-   WARUNGKITA PRO MAX — MODULES/AUTH.JS
-   Modul autentikasi & pengaturan koneksi. Saat ini belum
-   memakai Supabase Auth penuh (lihat roadmap "Multi-user
-   & Role"), tapi sudah menyediakan:
-   1. Penyimpanan nama kasir aktif (untuk shift & struk)
-   2. Pengaturan kredensial Supabase dari halaman Pengaturan
-   3. Kerangka dasar yang siap di-upgrade ke Supabase Auth
-   ===================================================== */
+/**
+ * ============================================
+ * AUTH MODULE
+ * ============================================
+ * Autentikasi user (versi sederhana)
+ * Untuk sekarang pakai local auth
+ * Nanti bisa di-upgrade ke Supabase Auth
+ */
 
 const AuthModule = {
-  /** Kunci localStorage untuk menyimpan nama kasir aktif */
-  _cashierKey: 'wk_cashier_name',
+    currentUser: null,
 
-  /* ===================================================
-     NAMA KASIR AKTIF
-     =================================================== */
+    init() {
+        console.log('%c🔐 AuthModule initialized', 'color: #3b82f6;');
+        
+        // Load user from localStorage
+        const savedUser = Utils.loadFromStorage?.('warungkita_user', null);
+        if (savedUser) {
+            this.currentUser = savedUser;
+            this.updateUI();
+        } else {
+            // Default user
+            this.currentUser = {
+                id: 1,
+                name: 'Admin',
+                role: 'admin',
+                email: 'admin@warungkita.com'
+            };
+            Utils.saveToStorage?.('warungkita_user', this.currentUser);
+            this.updateUI();
+        }
 
-  /** Mengambil nama kasir yang sedang login dari localStorage */
-  getCashierName() {
-    return localStorage.getItem(this._cashierKey) || 'Kasir';
-  },
+        this.setupEventListeners();
+    },
 
-  /**
-   * Menyimpan nama kasir aktif dan memperbarui tampilan sidebar.
-   * @param {string} name
-   */
-  setCashierName(name) {
-    const clean = name.trim() || 'Kasir';
-    localStorage.setItem(this._cashierKey, clean);
-    const el = document.getElementById('cashierName');
-    if (el) el.textContent = clean;
-  },
+    updateUI() {
+        const userName = document.querySelector('.user-name');
+        const userRole = document.querySelector('.user-role');
+        
+        if (userName && this.currentUser) {
+            userName.textContent = this.currentUser.name;
+        }
+        if (userRole && this.currentUser) {
+            userRole.textContent = this.currentUser.role;
+        }
+    },
 
-  /** Meminta nama kasir lewat modal sederhana saat aplikasi pertama kali dibuka */
-  promptCashierNameIfNeeded() {
-    const existing = localStorage.getItem(this._cashierKey);
-    if (existing) {
-      this.setCashierName(existing);
-      return;
+    async login(email, password) {
+        // Simple auth - nanti ganti dengan Supabase Auth
+        if (email === 'admin@warungkita.com' && password === 'admin123') {
+            this.currentUser = {
+                id: 1,
+                name: 'Admin',
+                role: 'admin',
+                email: email
+            };
+            Utils.saveToStorage?.('warungkita_user', this.currentUser);
+            this.updateUI();
+            return { success: true };
+        }
+        return { success: false, message: 'Email atau password salah' };
+    },
+
+    logout() {
+        this.currentUser = null;
+        localStorage.removeItem('warungkita_user');
+        Utils.toast('Berhasil logout', 'info');
+    },
+
+    setupEventListeners() {
+        const btnLogout = document.getElementById('btnLogout');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', async () => {
+                const confirmed = await Utils.confirm('Yakin ingin logout?', 'Logout');
+                if (confirmed) this.logout();
+            });
+        }
     }
-
-    ModalManager.open('cashierName', {
-      title: 'Selamat Datang di WarungKita PRO MAX 👋',
-      size: 'sm',
-      bodyHtml: `
-        <label class="form-field">
-          <span>Siapa nama Anda (kasir yang bertugas)?</span>
-          <input type="text" id="cashierNameInput" placeholder="mis. Budi">
-        </label>`,
-      footerHtml: `<button class="btn btn-primary btn-block" id="saveCashierNameBtn">Mulai Bekerja</button>`,
-      dismissable: false,
-    });
-
-    document.getElementById('saveCashierNameBtn')?.addEventListener('click', () => {
-      const name = document.getElementById('cashierNameInput')?.value || 'Kasir';
-      this.setCashierName(name);
-      ModalManager.close();
-    });
-  },
-
-  /* ===================================================
-     PENGATURAN KONEKSI SUPABASE
-     =================================================== */
-
-  /** Mengisi form pengaturan dengan nilai konfigurasi saat ini */
-  populateSettingsForm() {
-    const urlInput = document.getElementById('settingSupabaseUrl');
-    const keyInput = document.getElementById('settingSupabaseKey');
-    if (urlInput) urlInput.value = CONFIG.SUPABASE_URL;
-    if (keyInput) keyInput.value = CONFIG.SUPABASE_ANON_KEY;
-  },
-
-  /**
-   * Menyimpan kredensial Supabase baru dari halaman Pengaturan,
-   * lalu menguji koneksinya.
-   */
-  async saveSupabaseSettings() {
-    const url = document.getElementById('settingSupabaseUrl')?.value.trim();
-    const key = document.getElementById('settingSupabaseKey')?.value.trim();
-
-    if (Utils.isEmpty(url) || Utils.isEmpty(key)) {
-      Utils.showToast('URL dan Key Supabase wajib diisi', 'error');
-      return;
-    }
-
-    localStorage.setItem('wk_supabase_url', url);
-    localStorage.setItem('wk_supabase_key', key);
-    CONFIG.SUPABASE_URL = url;
-    CONFIG.SUPABASE_ANON_KEY = key;
-
-    Utils.showToast('Menguji koneksi ke Supabase...', 'info');
-    const connected = await API.testConnection();
-
-    if (connected) {
-      Utils.showToast('Berhasil terhubung ke Supabase ✅', 'success');
-      // Muat ulang seluruh data utama setelah berhasil konek
-      // Reload data utama setelah koneksi berhasil
-      await ProductsModule.load();
-      // Transactions & customers di-load via AppMain._loadInitialData
-    } else {
-      Utils.showToast('Gagal terhubung. Periksa kembali URL dan Key Anda', 'error');
-    }
-  },
-
-  /* ===================================================
-     INISIALISASI
-     =================================================== */
-  init() {
-    this.setCashierName(this.getCashierName());
-
-    const saveBtn = document.getElementById('saveSettingsBtn');
-    saveBtn?.addEventListener('click', () => this.saveSupabaseSettings());
-
-    // Isi form pengaturan saat view Pengaturan dibuka
-    STATE.subscribe('view', () => {
-      if (STATE.currentView === 'pengaturan') this.populateSettingsForm();
-    });
-  },
 };
+
+Object.freeze(AuthModule);
+console.log('%c✅ AuthModule loaded', 'color: #10b981;');
