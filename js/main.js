@@ -1,123 +1,71 @@
 /**
- * ============================================
  * WARUNGKITA PRO MAX - Main Application
- * ============================================
- * Entry point aplikasi
- * Menginisialisasi semua modules & features
  */
 
 const AppMain = {
-    // ========================================
-    // INITIALIZATION
-    // ========================================
     async init() {
-        console.log('%c🏪 WarungKita PRO MAX - Starting...', 'color: #3b82f6; font-size: 16px; font-weight: bold;');
+        console.log('%c🏪 WarungKita PRO MAX - Starting...', 'color: #3b82f6; font-size: 16px;');
         
         try {
-            // 1. Validate configuration
-            if (!isSupabaseConfigured()) {
-                Utils.toast('⚠️ Supabase belum dikonfigurasi. Edit js/config.js', 'warning', 5000);
-            }
-
-            // 2. Test Supabase connection
+            // 1. Test Supabase connection
             const isConnected = await API.healthCheck();
-            if (isConnected) {
-                console.log('%c✅ Supabase connected', 'color: #10b981;');
-            } else {
-                console.warn('⚠️ Supabase connection failed, using offline mode');
-                Utils.toast('Mode offline: Tidak dapat terhubung ke server', 'warning');
-            }
+            console.log(`%c${isConnected ? '✅ Supabase connected' : '⚠️ Offline mode'}`, 
+                `color: ${isConnected ? '#10b981' : '#f59e0b'};`);
 
-            // 3. Initialize Auth
-            if (typeof AuthModule !== 'undefined') {
-                AuthModule.init();
-            }
+            // 2. Initialize Auth
+            if (typeof AuthModule !== 'undefined') AuthModule.init();
 
-            // 4. Initialize Core Modules
-            await this.initModules();
+            // 3. Initialize Core Modules
+            if (typeof ProductsModule !== 'undefined') await ProductsModule.init();
+            if (typeof CartModule !== 'undefined') CartModule.init();
+            if (typeof PaymentModule !== 'undefined') PaymentModule.init();
+            if (typeof StockModule !== 'undefined') StockModule.init();
+            if (typeof AIModule !== 'undefined') AIModule.init();
 
-            // 5. Initialize Features
-            this.initFeatures();
+            // 4. Initialize Features (optional)
+            ['ShiftModule', 'BarcodeModule', 'OfflineModule', 'ExportModule', 
+             'HoldCartModule', 'NotificationsModule', 'ReturnsModule', 'SplitPaymentModule']
+            .forEach(name => {
+                const mod = window[name];
+                if (mod && typeof mod.init === 'function') {
+                    try { mod.init(); } catch(e) { console.warn(`${name} not ready`); }
+                }
+            });
 
-            // 6. Initialize Events
-            if (typeof Events !== 'undefined') {
-                Events.init();
-            }
+            // 5. Initialize Events
+            if (typeof Events !== 'undefined') Events.init();
 
-            // 7. Setup navigation
+            // 6. Setup navigation
             this.setupNavigation();
 
-            // 8. Hide loading screen
-            this.hideLoadingScreen();
+            // 7. Setup keyboard shortcuts
+            this.setupKeyboardShortcuts();
 
-            // 9. Show welcome message
-            this.showWelcome();
+            // 8. Hide loading, show app
+            document.getElementById('loadingScreen')?.classList.add('fade-out');
+            setTimeout(() => {
+                const loading = document.getElementById('loadingScreen');
+                if (loading) loading.style.display = 'none';
+                document.getElementById('app').style.display = '';
+            }, 500);
 
-            console.log('%c✅ App initialized successfully', 'color: #10b981; font-size: 14px;');
+            // 9. Welcome
+            setTimeout(() => {
+                const name = AuthModule?.currentUser?.name || 'Admin';
+                Utils.toast(`Selamat datang, ${name}! 👋`, 'success');
+            }, 1000);
+
+            console.log('%c✅ App ready!', 'color: #10b981; font-size: 14px;');
         } catch (error) {
-            console.error('❌ Fatal error during init:', error);
-            Utils.toast('Gagal memuat aplikasi: ' + error.message, 'error', 5000);
-            this.hideLoadingScreen();
+            console.error('❌ Fatal init error:', error);
+            Utils.toast('Gagal init: ' + error.message, 'error');
+            document.getElementById('loadingScreen')?.classList.add('fade-out');
+            document.getElementById('app').style.display = '';
         }
     },
 
-    // ========================================
-    // INITIALIZE MODULES
-    // ========================================
-    async initModules() {
-        const modules = [
-            { name: 'ProductsModule', module: ProductsModule },
-            { name: 'CartModule', module: CartModule },
-            { name: 'PaymentModule', module: PaymentModule },
-            { name: 'StockModule', module: StockModule },
-            { name: 'AIModule', module: AIModule },
-            { name: 'ShiftModule', module: typeof ShiftModule !== 'undefined' ? ShiftModule : null },
-            { name: 'NotificationsModule', module: typeof NotificationsModule !== 'undefined' ? NotificationsModule : null },
-            { name: 'HoldCartModule', module: typeof HoldCartModule !== 'undefined' ? HoldCartModule : null }
-        ];
-
-        for (const { name, module } of modules) {
-            if (module && typeof module.init === 'function') {
-                try {
-                    await module.init();
-                    console.log(`✅ ${name} initialized`);
-                } catch (error) {
-                    console.error(`❌ ${name} failed:`, error);
-                }
-            }
-        }
-    },
-
-    // ========================================
-    // INITIALIZE FEATURES
-    // ========================================
-    initFeatures() {
-        const features = [
-            'BarcodeModule',
-            'OfflineModule',
-            'ExportModule',
-            'ReturnsModule',
-            'SplitPaymentModule'
-        ];
-
-        features.forEach(name => {
-            const feature = window[name];
-            if (feature && typeof feature.init === 'function') {
-                try {
-                    feature.init();
-                    console.log(`✅ ${name} initialized`);
-                } catch (error) {
-                    console.warn(`⚠️ ${name} not available:`, error.message);
-                }
-            }
-        });
-    },
-
-    // ========================================
-    // NAVIGATION
-    // ========================================
     setupNavigation() {
-        // Nav items click
+        // Nav items
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -126,123 +74,68 @@ const AppMain = {
             });
         });
 
-        // Mobile menu toggle
-        const btnMenuMobile = document.getElementById('btnMenuMobile');
-        if (btnMenuMobile) {
-            btnMenuMobile.addEventListener('click', () => {
-                document.getElementById('sidebar').classList.toggle('active');
-            });
-        }
+        // Mobile menu
+        document.getElementById('btnMenuMobile')?.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
 
         // Sidebar toggle
-        const btnToggleSidebar = document.getElementById('toggleSidebar');
-        if (btnToggleSidebar) {
-            btnToggleSidebar.addEventListener('click', () => {
-                document.getElementById('sidebar').classList.toggle('collapsed');
-            });
-        }
+        document.getElementById('toggleSidebar')?.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        });
 
-        // Initial view
+        // Default view
         this.switchView('dashboard');
     },
 
     switchView(viewName) {
-        // Update state
         AppState.setView(viewName);
 
-        // Update nav active state
+        // Active nav
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.view === viewName);
         });
 
-        // Show/hide views
+        // Show view
         document.querySelectorAll('.view').forEach(view => {
             view.classList.toggle('active', view.id === `view-${viewName}`);
         });
 
-        // Update page title
+        // Page title
         const titles = {
-            dashboard: 'Dashboard',
-            pos: 'Kasir (POS)',
-            products: 'Manajemen Produk',
-            transactions: 'Riwayat Transaksi',
-            stock: 'Manajemen Stok',
-            customers: 'Pelanggan',
-            reports: 'Laporan',
-            shift: 'Shift Kasir'
+            dashboard: 'Dashboard', pos: 'Kasir (POS)', products: 'Manajemen Produk',
+            transactions: 'Riwayat Transaksi', stock: 'Manajemen Stok',
+            customers: 'Pelanggan', reports: 'Laporan', shift: 'Shift Kasir'
         };
-        
         const pageTitle = document.getElementById('pageTitle');
-        if (pageTitle) {
-            pageTitle.textContent = titles[viewName] || 'Dashboard';
-        }
+        if (pageTitle) pageTitle.textContent = titles[viewName] || 'Dashboard';
 
         // Close mobile sidebar
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar && window.innerWidth <= 768) {
-            sidebar.classList.remove('active');
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebar')?.classList.remove('active');
         }
 
-        // Trigger view-specific logic
-        this.onViewChange(viewName);
+        // View-specific logic
+        if (viewName === 'dashboard') this.refreshDashboard();
+        if (viewName === 'transactions') this.loadTransactions();
+        if (viewName === 'customers') this.loadCustomers();
+        if (viewName === 'pos') ProductsModule.renderProductsGrid();
+        if (viewName === 'stock') StockModule.render();
     },
 
-    onViewChange(viewName) {
-        switch (viewName) {
-            case 'dashboard':
-                this.refreshDashboard();
-                break;
-            case 'transactions':
-                this.loadTransactionsHistory();
-                break;
-            case 'customers':
-                this.loadCustomers();
-                break;
-            case 'pos':
-                ProductsModule.renderProductsGrid();
-                break;
-            case 'stock':
-                StockModule.render();
-                break;
-        }
-    },
-
-    // ========================================
-    // DASHBOARD
-    // ========================================
     async refreshDashboard() {
         try {
-            // Get today's transactions
             const todayTx = await API.transactions.getToday();
-            
-            // Calculate stats
-            const totalTransactions = todayTx.length;
-            const totalRevenue = todayTx.reduce((sum, t) => sum + (t.total_amount || 0), 0);
-            const productsSold = todayTx.reduce((sum, t) => sum + (t.items_count || 0), 0);
+            const totalRev = todayTx.reduce((s, t) => s + (t.total_amount || 0), 0);
             const lowStock = AppState.products.filter(p => p.stock <= CONFIG.stock.lowStockThreshold).length;
 
-            // Update UI
-            const elTx = document.getElementById('statTransactions');
-            const elRev = document.getElementById('statRevenue');
-            const elProd = document.getElementById('statProductsSold');
-            const elLow = document.getElementById('statLowStock');
+            const el = (id) => document.getElementById(id);
+            if (el('statTransactions')) el('statTransactions').textContent = todayTx.length;
+            if (el('statRevenue')) el('statRevenue').textContent = Utils.formatCurrency(totalRev);
+            if (el('statLowStock')) el('statLowStock').textContent = lowStock;
 
-            if (elTx) elTx.textContent = totalTransactions;
-            if (elRev) elRev.textContent = Utils.formatCurrency(totalRevenue);
-            if (elProd) elProd.textContent = productsSold;
-            if (elLow) elLow.textContent = lowStock;
-
-            // Render recent transactions
             this.renderRecentTransactions(todayTx.slice(0, 5));
-
-            // Render charts
-            if (typeof ChartsModule !== 'undefined') {
-                ChartsModule.renderSalesChart(todayTx);
-                ChartsModule.renderTopProductsChart();
-            }
-        } catch (error) {
-            console.error('Dashboard refresh error:', error);
-        }
+        } catch (e) { console.error('Dashboard error:', e); }
     },
 
     renderRecentTransactions(transactions) {
@@ -250,228 +143,94 @@ const AppMain = {
         if (!tbody) return;
 
         if (transactions.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="empty-state">
-                        <i class="fas fa-receipt"></i>
-                        <p>Belum ada transaksi hari ini</p>
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#94a3b8;">
+                <i class="fas fa-receipt fa-2x"></i><p>Belum ada transaksi hari ini</p></td></tr>`;
             return;
         }
 
-        tbody.innerHTML = transactions.map(tx => {
-            const methodBadge = {
-                cash: '<span class="badge badge-success">Tunai</span>',
-                qris: '<span class="badge badge-primary">QRIS</span>',
-                transfer: '<span class="badge badge-info">Transfer</span>',
-                ewallet: '<span class="badge badge-warning">E-Wallet</span>'
-            };
-
-            return `
-                <tr>
-                    <td><code>${tx.transaction_code}</code></td>
-                    <td>${tx.customer_name || 'Umum'}</td>
-                    <td><strong>${Utils.formatCurrency(tx.total_amount)}</strong></td>
-                    <td>${methodBadge[tx.payment_method] || tx.payment_method}</td>
-                    <td><span class="badge badge-success">${tx.payment_status}</span></td>
-                    <td>${Utils.getRelativeTime(tx.created_at)}</td>
-                </tr>
-            `;
-        }).join('');
+        tbody.innerHTML = transactions.map(tx => `
+            <tr>
+                <td><code>${tx.transaction_code || tx.id}</code></td>
+                <td>${tx.customer_name || 'Umum'}</td>
+                <td><strong>${Utils.formatCurrency(tx.total_amount)}</strong></td>
+                <td><span class="badge badge-info">${tx.payment_method}</span></td>
+                <td><span class="badge badge-success">${tx.payment_status}</span></td>
+                <td>${Utils.getRelativeTime(tx.created_at)}</td>
+            </tr>
+        `).join('');
     },
 
-    // ========================================
-    // TRANSACTIONS HISTORY
-    // ========================================
-    async loadTransactionsHistory() {
+    async loadTransactions() {
         const tbody = document.getElementById('transactionsTableBody');
         if (!tbody) return;
-
         try {
-            const transactions = await API.transactions.getAll({ limit: 100 });
-            
-            if (transactions.length === 0) {
-                tbody.innerHTML = `
+            const txs = await API.transactions.getAll({ limit: 100 });
+            tbody.innerHTML = txs.length === 0 
+                ? `<tr><td colspan="8" style="text-align:center;padding:2rem;">Belum ada transaksi</td></tr>`
+                : txs.map(tx => `
                     <tr>
-                        <td colspan="8" class="empty-state">
-                            <i class="fas fa-receipt"></i>
-                            <p>Belum ada transaksi</p>
-                        </td>
+                        <td><code>${tx.transaction_code || tx.id}</code></td>
+                        <td>${Utils.formatDateTime(tx.created_at)}</td>
+                        <td>${tx.customer_name || 'Umum'}</td>
+                        <td>-</td>
+                        <td><strong>${Utils.formatCurrency(tx.total_amount)}</strong></td>
+                        <td>${tx.payment_method}</td>
+                        <td><span class="badge badge-success">${tx.payment_status}</span></td>
+                        <td><button class="btn-icon-small"><i class="fas fa-eye"></i></button></td>
                     </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = transactions.map(tx => `
-                <tr>
-                    <td><code>${tx.transaction_code}</code></td>
-                    <td>${Utils.formatDateTime(tx.created_at)}</td>
-                    <td>${tx.customer_name || 'Umum'}</td>
-                    <td>${tx.items_count || '-'}</td>
-                    <td><strong>${Utils.formatCurrency(tx.total_amount)}</strong></td>
-                    <td>${tx.payment_method}</td>
-                    <td><span class="badge badge-success">${tx.payment_status}</span></td>
-                    <td>
-                        <button class="btn-icon-small btn-view-receipt" data-id="${tx.id}">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Attach listeners
-            tbody.querySelectorAll('.btn-view-receipt').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const id = parseInt(e.target.closest('button').dataset.id);
-                    await this.viewTransactionReceipt(id);
-                });
-            });
-        } catch (error) {
-            console.error('Load transactions error:', error);
-            Utils.toast('Gagal memuat transaksi', 'error');
-        }
+                `).join('');
+        } catch (e) { console.error(e); }
     },
 
-    async viewTransactionReceipt(transactionId) {
-        try {
-            const tx = await API.transactions.getById(transactionId);
-            const items = await API.transactions.getItems(transactionId);
-            
-            if (!tx) {
-                Utils.toast('Transaksi tidak ditemukan', 'error');
-                return;
-            }
-
-            PaymentModule.transactionData = {
-                ...tx,
-                items: items,
-                cash_received: tx.total_amount,
-                change: 0
-            };
-            
-            PaymentModule.showReceipt();
-        } catch (error) {
-            console.error('View receipt error:', error);
-            Utils.toast('Gagal memuat struk', 'error');
-        }
-    },
-
-    // ========================================
-    // CUSTOMERS
-    // ========================================
     async loadCustomers() {
         const tbody = document.getElementById('customersTableBody');
         if (!tbody) return;
-
         try {
             const customers = await API.customers.getAll();
             AppState.setCustomers(customers);
-
-            if (customers.length === 0) {
-                tbody.innerHTML = `
+            tbody.innerHTML = customers.length === 0
+                ? `<tr><td colspan="6" style="text-align:center;padding:2rem;">Belum ada pelanggan</td></tr>`
+                : customers.map(c => `
                     <tr>
-                        <td colspan="6" class="empty-state">
-                            <i class="fas fa-users"></i>
-                            <p>Belum ada pelanggan</p>
-                        </td>
+                        <td><strong>${c.name}</strong></td>
+                        <td>${c.phone || '-'}</td>
+                        <td>${c.total_transactions || 0}</td>
+                        <td>${Utils.formatCurrency(c.total_spent || 0)}</td>
+                        <td><span class="badge badge-info">${c.points || 0} pts</span></td>
+                        <td><button class="btn-icon-small"><i class="fas fa-edit"></i></button></td>
                     </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = customers.map(c => `
-                <tr>
-                    <td><strong>${c.name}</strong></td>
-                    <td>${c.phone || '-'}</td>
-                    <td>${c.total_transactions || 0}</td>
-                    <td>${Utils.formatCurrency(c.total_spent || 0)}</td>
-                    <td><span class="badge badge-info">${c.points || 0} pts</span></td>
-                    <td>
-                        <button class="btn-icon-small"><i class="fas fa-edit"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        } catch (error) {
-            console.error('Load customers error:', error);
-        }
+                `).join('');
+        } catch (e) { console.error(e); }
     },
 
-    // ========================================
-    // UI HELPERS
-    // ========================================
-    hideLoadingScreen() {
-        const loading = document.getElementById('loadingScreen');
-        const app = document.getElementById('app');
-        
-        if (loading) {
-            loading.classList.add('fade-out');
-            setTimeout(() => loading.remove(), 500);
-        }
-        
-        if (app) {
-            app.style.display = '';
-        }
-    },
-
-    showWelcome() {
-        setTimeout(() => {
-            const userName = AuthModule.currentUser?.name || 'Admin';
-            Utils.toast(`Selamat datang, ${userName}! 👋`, 'success');
-        }, 1000);
-    },
-
-    // ========================================
-    // KEYBOARD SHORTCUTS
-    // ========================================
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // Ignore if typing in input
             if (e.target.matches('input, textarea, select')) return;
-
-            // Ctrl+K: Focus search
+            
             if (e.ctrlKey && e.key === 'k') {
                 e.preventDefault();
                 document.getElementById('globalSearch')?.focus();
             }
-
-            // Ctrl+N: New product
             if (e.ctrlKey && e.key === 'n') {
                 e.preventDefault();
                 ProductsModule.openNewModal();
             }
-
-            // Ctrl+D: Toggle theme
             if (e.ctrlKey && e.key === 'd') {
                 e.preventDefault();
                 AppState.toggleTheme();
             }
-
-            // F9: Process payment
             if (e.key === 'F9') {
                 e.preventDefault();
                 PaymentModule.openPaymentModal();
             }
-
-            // Escape: Clear cart / Close modals
             if (e.key === 'Escape') {
-                if (document.querySelector('.modal.active')) {
-                    Utils.closeAllModals();
-                } else if (AppState.currentView === 'pos') {
-                    CartModule.clearCart();
-                }
+                if (document.querySelector('.modal.active')) Utils.closeAllModals();
+                else if (AppState.currentView === 'pos') CartModule.clearCart();
             }
         });
     }
 };
 
-// ============================================
-// BOOTSTRAP
-// ============================================
-document.addEventListener('DOMContentLoaded', () => {
-    AppMain.setupKeyboardShortcuts();
-    AppMain.init();
-});
-
+// Bootstrap
+document.addEventListener('DOMContentLoaded', () => AppMain.init());
 console.log('%c✅ AppMain loaded', 'color: #10b981;');
